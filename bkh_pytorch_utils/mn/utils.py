@@ -7,7 +7,7 @@ import shutil
 import numpy as np
 import monai as mn
 
-def empty_monai_cache(cache_dir:str = MONAI_CACHE_DIR) -> None:
+def empty_monai_cache(cache_dir:str) -> None:
     if os.path.exists(cache_dir+"/train"):
         shutil.rmtree(cache_dir+"/train")
         print("MOANI's train cache directory removed successfully!")
