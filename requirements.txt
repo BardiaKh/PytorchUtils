@@ -1,0 +1,5 @@
+# the default package dependencies
+
+numpy>=1.17.2
+torch>=1.4
+tabulate
