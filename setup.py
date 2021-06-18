@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name="BKhPytorchUtils",
+    name="bkh_pytorch_utils",
     version="0.0.1",
     author="Bardia Khosravi",
     author_email="bardiakhosravi95@gmail.com",
