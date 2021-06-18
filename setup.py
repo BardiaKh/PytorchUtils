@@ -7,9 +7,9 @@ setuptools.setup(
     author_email="bardiakhosravi95@gmail.com",
     #description="<Template Setup.py package>",
     #long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="<https://github.com/BardiaKh/PytorchUtils",
-    packages=setuptools.find_packages(),
+    #long_description_content_type="text/markdown",
+    url="https://github.com/BardiaKh/PytorchUtils",
+    packages=setuptools.find_packages(exclude=['data']),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
