@@ -1,3 +1,3 @@
-import .pl
-import .py
-import .mn
+import pl
+import py
+import mn
