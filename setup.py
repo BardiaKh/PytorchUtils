@@ -5,9 +5,7 @@ setuptools.setup(
     version="0.0.1",
     author="Bardia Khosravi",
     author_email="bardiakhosravi95@gmail.com",
-    #description="<Template Setup.py package>",
-    #long_description=long_description,
-    #long_description_content_type="text/markdown",
+    description="A rapid prototyping tool for MONAI & PyTorch Lightning",
     url="https://github.com/BardiaKh/PytorchUtils",
     packages=setuptools.find_packages(),
     classifiers=[
