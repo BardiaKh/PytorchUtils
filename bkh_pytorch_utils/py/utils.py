@@ -1,13 +1,18 @@
 from typing import List, Tuple, Dict, Union
 
+from .cm_helper import pretty_plot_confusion_matrix
+
 import os
 import random
 import torch
 
 import numpy as np
+import pandas as pd
 from tqdm.auto import tqdm
 import monai as mn
 import pytorch_lightning as pl
+
+from sklearn.metrics import confusion_matrix
 
 
 def seed_all(seed:int) -> None:
@@ -41,3 +46,10 @@ def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, dims:int = 1)-
 
     print("Final Mean:",mean)
     print("Final Std:",std)
+
+def plot_confusion_matrix(targets:np.array, preds:np.array, columns:list=None, annot:bool=True, cmap:str="Oranges",
+      fmt:str='.2f', fz:int=11, lw:float=0.5, cbar:bool=False, figsize:list=[8,8], show_null_values:int=0, pred_val_axis:str='col')
+
+    matrix = confusion_matrix(y_test, predictions)
+    df_cm = pd.DataFrame(matrix, index=columns, columns=columns)
+    pretty_plot_confusion_matrix(df_cm, fz=fz, cmap=cmap, figsize=figsize, annot=annot, fmt=fmt, lw=lw, cbar=cbar, show_null_values=show_null_values, pred_val_axis=pred_val_axis)
