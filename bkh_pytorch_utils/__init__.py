@@ -6,5 +6,6 @@ from .mn.utils import (
 from .pl.utils import BKhModule
 from .py.utils import (
     seed_all,
-    get_data_stats
+    get_data_stats,
+    plot_confusion_matrix
 )
