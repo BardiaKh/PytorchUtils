@@ -55,6 +55,6 @@ def plot_confusion_matrix(targets:np.array, preds:np.array, columns:list=None, a
         columns = ['class %s' %(i) for i in list(ascii_uppercase)[0:len(np.unique(y_test))]]
 
 
-    matrix = confusion_matrix(y_test, predictions)
+    matrix = confusion_matrix(targets, preds)
     df_cm = pd.DataFrame(matrix, index=columns, columns=columns)
     pretty_plot_confusion_matrix(df_cm, fz=fz, cmap=cmap, figsize=figsize, annot=annot, fmt=fmt, lw=lw, cbar=cbar, show_null_values=show_null_values, pred_val_axis=pred_val_axis)
