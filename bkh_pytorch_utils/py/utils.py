@@ -47,12 +47,12 @@ def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, dims:int = 1)-
     print("Final Mean:",mean)
     print("Final Std:",std)
 
-def plot_confusion_matrix(targets:np.array, preds:np.array, columns:list=None, annot:bool=True, cmap:str="Oranges",
+def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, annot:bool=True, cmap:str="Oranges",
       fmt:str='.2f', fz:int=11, lw:float=0.5, cbar:bool=False, figsize:list=[8,8], show_null_values:int=0, pred_val_axis:str='col'):
 
     if columns is None:
         from string import ascii_uppercase
-        columns = ['class %s' %(i) for i in list(ascii_uppercase)[0:len(np.unique(y_test))]]
+        columns = ['class %s' %(i) for i in list(ascii_uppercase)[0:len(np.unique(targets))]]
 
 
     matrix = confusion_matrix(targets, preds)
