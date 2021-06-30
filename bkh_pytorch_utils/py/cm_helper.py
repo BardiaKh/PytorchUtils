@@ -180,7 +180,7 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
 
     #titles and legends
     #ax.set_title('Confusion matrix')
-    ax.set_xlabel(xlbl)
-    ax.set_ylabel(ylbl)
+    ax.set_xlabel(xlbl,fontsize=int(fz*1.1))
+    ax.set_ylabel(ylbl,fontsize=int(fz*1.1))
     plt.tight_layout()  #set layout slim
     plt.show()
