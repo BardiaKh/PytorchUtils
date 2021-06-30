@@ -12,6 +12,7 @@ from tqdm.auto import tqdm
 import monai as mn
 import pytorch_lightning as pl
 
+from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
 
 
@@ -51,10 +52,9 @@ def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, a
       fmt:str='.2f', fz:int=11, lw:float=0.5, cbar:bool=False, figsize:list=[8,8], show_null_values:int=0, pred_val_axis:str='col'):
 
     if columns is None:
-        from string import ascii_uppercase
-        columns = ['class %s' %(i) for i in list(ascii_uppercase)[0:len(np.unique(targets))]]
-
+        columns = ['Class %s' %(i) for i in list(ascii_uppercase)[0:len(np.unique(targets))]]
 
     matrix = confusion_matrix(targets, preds)
     df_cm = pd.DataFrame(matrix, index=columns, columns=columns)
+
     pretty_plot_confusion_matrix(df_cm, fz=fz, cmap=cmap, figsize=figsize, annot=annot, fmt=fmt, lw=lw, cbar=cbar, show_null_values=show_null_values, pred_val_axis=pred_val_axis)

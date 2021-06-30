@@ -13,6 +13,17 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=["numpy>=1.17.2","torch>=1.4","tabulate>=0.8.9","tqdm>4.60.0","monai>=0.5.2","pytorch-lightning>=1.3.0"],
+    install_requires=[
+        "matplotlib>=3.1.2",
+        "pandas>=0.25.0",
+        "numpy>=1.17.2",
+        "torch>=1.4",
+        "tabulate>=0.8.9",
+        "tqdm>4.60.0",
+        "monai>=0.5.2",
+        "pytorch-lightning>=1.3.0",
+        "scikit-learn>=0.20.0",
+        "seaborn>=0.11.0"
+    ],
     python_requires='>=3.6',
 )
