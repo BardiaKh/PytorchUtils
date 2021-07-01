@@ -5,7 +5,9 @@ from .mn.utils import (
 )
 from .pl.utils import BKhModule
 from .py.utils import (
+    NonSparseCrossEntropyLoss,
     seed_all,
     get_data_stats,
+    one_hot_encode,
     plot_confusion_matrix
 )

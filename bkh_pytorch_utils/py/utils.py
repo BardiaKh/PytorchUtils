@@ -15,6 +15,27 @@ import pytorch_lightning as pl
 from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
 
+class NonSparseCrossEntropyLoss(torch.nn.modules.loss._WeightedLoss):
+    def __init__(self, weight=None, reduction='mean'):
+        super().__init__(weight=weight, reduction=reduction)
+        self.weight = weight
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        lsm = torch.nn.functional.log_softmax(inputs, -1)
+
+        if self.weight is not None:
+            lsm = lsm * self.weight.unsqueeze(0)
+
+        loss = -(targets * lsm).sum(-1)
+
+        if self.reduction == 'sum':
+            loss = loss.sum()
+        elif self.reduction == 'mean':
+            loss = loss.mean()
+
+        return loss
+
 
 def seed_all(seed:int) -> None:
     random.seed(seed)
@@ -47,6 +68,15 @@ def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, dims:int = 1)-
 
     print("Final Mean:",mean)
     print("Final Std:",std)
+
+def one_hot_encode(true_labels: torch.Tensor, classes: int, smoothing=0.0):
+    assert 0 <= smoothing < 1
+    confidence = 1.0 - smoothing
+    label_shape = torch.Size((true_labels.size(0), classes))
+    with torch.no_grad():
+        true_dist = torch.empty(size=label_shape, device=true_labels.device)
+        true_dist.fill_(smoothing / (classes - 1))
+        true_dist.scatter_(1, true_labels.data.unsqueeze(1), confidence)
 
 def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, annot:bool=True, cmap:str="Oranges",
       fmt:str='.2f', fz:int=13, lw:float=0.5, cbar:bool=False, figsize:list=[9,9], show_null_values:int=1, pred_val_axis:str='x'):
