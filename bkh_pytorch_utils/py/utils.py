@@ -78,6 +78,8 @@ def one_hot_encode(true_labels: torch.Tensor, classes: int, smoothing=0.0):
         true_dist.fill_(smoothing / (classes - 1))
         true_dist.scatter_(1, true_labels.data.unsqueeze(1), confidence)
 
+    return true_dist
+
 def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, annot:bool=True, cmap:str="Oranges",
       fmt:str='.2f', fz:int=13, lw:float=0.5, cbar:bool=False, figsize:list=[9,9], show_null_values:int=1, pred_val_axis:str='x'):
 
@@ -88,3 +90,23 @@ def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, a
     df_cm = pd.DataFrame(matrix, index=columns, columns=columns)
 
     pretty_plot_confusion_matrix(df_cm, fz=fz, cmap=cmap, figsize=figsize, annot=annot, fmt=fmt, lw=lw, cbar=cbar, show_null_values=show_null_values, pred_val_axis=pred_val_axis)
+
+def add_weight_decay(model: torch.nn.Module, weight_decay:float=1e-5, skip_list:list=[]):
+    #########################################################################################################
+    ### Adapdet from: Adapted from: https://github.com/rwightman/pytorch-image-models/tree/master/timm
+    #########################################################################################################
+
+    decay = []
+    no_decay = []
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue  # frozen weights
+        if len(param.shape) == 1 or name.endswith(".bias") or name in skip_list:
+            no_decay.append(param)
+        else:
+            decay.append(param)
+
+    return [
+        {'params': no_decay, 'weight_decay': 0.},
+        {'params': decay, 'weight_decay': weight_decay},
+    ]

@@ -20,6 +20,13 @@ class BKhModule(pl.LightningModule):
         if val_ds is not None:
             self.set_val_dataset(val_ds)
 
+        self.val_stats={
+            "length":0,
+            "batch_size":0,
+            "targets":torch.empty((0),dtype=torch.int64),
+            "preds":torch.empty((0),dtype=torch.int64)
+        }
+
     def stats(self):
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         freezed_params = sum(p.numel() for p in self.model.parameters() if not p.requires_grad)
@@ -63,3 +70,10 @@ class BKhModule(pl.LightningModule):
         items = super().get_progress_bar_dict()
         items.pop("v_num", None)
         return items
+
+    def on_validation_start(self):
+        val_ds_length=len(self.val_dl.dataset)
+        self.val_stats['length'] = val_ds_length
+        self.val_stats['batch_size'] = self.val_dl.batch_size
+        self.val_stats['targets'] = torch.empty((val_ds_length), dtype=torch.int64)
+        self.val_stats['preds'] = torch.empty((val_ds_length), dtype=torch.int64)

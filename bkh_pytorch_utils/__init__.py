@@ -9,5 +9,6 @@ from .py.utils import (
     seed_all,
     get_data_stats,
     one_hot_encode,
-    plot_confusion_matrix
+    plot_confusion_matrix,
+    add_weight_decay
 )
