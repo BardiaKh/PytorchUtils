@@ -1,7 +1,8 @@
 from .mn.utils import (
     empty_monai_cache,
     FilterKeys,
-    EnsureGrayscaleD
+    EnsureGrayscaleD,
+    TransposeD
 )
 from .pl.utils import BKhModule
 from .py.utils import (

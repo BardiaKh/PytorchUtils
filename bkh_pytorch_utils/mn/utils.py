@@ -47,3 +47,17 @@ class EnsureGrayscaleD(mn.transforms.Transform):
 
                 data_copy[key]=img
         return data_copy
+
+class TransposeD(mn.transforms.Transform):
+    def __init__(self,keys:List[str], indices:tuple) -> None:
+        super().__init__()
+        self.keys=keys
+        self.transposer=mn.transforms.Transpose(indices)
+
+    def __call__(self, data):
+        data_copy=copy.deepcopy(data)
+        for key in data:
+            if key in self.keys:
+                img=data[key].copy()
+                data_copy[key]=self.transposer(img)
+        return data_copy
