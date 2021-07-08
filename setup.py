@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="bkh_pytorch_utils",
-    version="0.0.3",
+    version="0.0.4",
     author="Bardia Khosravi",
     author_email="bardiakhosravi95@gmail.com",
     description="A rapid prototyping tool for MONAI & PyTorch Lightning",
@@ -23,7 +23,8 @@ setuptools.setup(
         "monai>=0.5.2",
         "pytorch-lightning>=1.3.0",
         "scikit-learn>=0.20.0",
-        "seaborn>=0.11.0"
+        "seaborn>=0.11.0",
+        "scikit-image>=0.18.0",
     ],
     python_requires='>=3.6',
 )
