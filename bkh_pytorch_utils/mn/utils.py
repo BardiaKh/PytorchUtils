@@ -3,7 +3,8 @@ from typing import List, Tuple, Dict, Union
 import os
 import copy
 import shutil
-import skimage
+from skimage.filters import unsharp_mask, meijering, sato, scharr, hessian
+from skimage.exposure import equalize_hist, equalize_adapthist
 
 import numpy as np
 import monai as mn
@@ -82,25 +83,25 @@ class ApplySkimageFilterD(mn.transforms.RandomizableTransform):
                 img=data[key].copy()
 
                 if self.filter_name == 'equalize_hist':
-                    img = skimage.exposure.equalize_hist(img, nbins= self.config.get('nbins',256), mask=self.config.get('mask',None))
+                    img = equalize_hist(img, nbins= self.config.get('nbins',256), mask=self.config.get('mask',None))
 
                 if self.filter_name == 'equalize_adapthist':
-                    img = skimage.exposure.equalize_adapthist(img, kernel_size=self.config.get('kernel_size',None), clip_limit=self.config.get('clip_limit',0.01), nbins=self.config.get('nbins',256))
+                    img = equalize_adapthist(img, kernel_size=self.config.get('kernel_size',None), clip_limit=self.config.get('clip_limit',0.01), nbins=self.config.get('nbins',256))
 
                 if self.filter_name == 'unsharp_mask':
-                    img = skimage.filters.unsharp_mask(img, radius=self.config.get('radius',5), amount=self.config.get('amount',2))
+                    img = unsharp_mask(img, radius=self.config.get('radius',5), amount=self.config.get('amount',2))
 
                 if self.filter_name == 'meijering':
-                    img = skimage.filters.meijering(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), alpha=self.config.get('alpha',None), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
+                    img = meijering(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), alpha=self.config.get('alpha',None), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
 
                 if self.filter_name == 'sato':
-                    img = skimage.filters.sato(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
+                    img = sato(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
 
                 if self.filter_name == 'scharr':
-                    img = skimage.filters.scharr(img, mask=self.config.get('mask',None), axis=self.config.get('axis',None), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
+                    img = scharr(img, mask=self.config.get('mask',None), axis=self.config.get('axis',None), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
 
                 if self.filter_name == 'hessian':
-                    img = skimage.filters.hessian(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), scale_range=self.config.get('scale_range',None), scale_step=self.config.get('scale_step',None), alpha=self.config.get('alpha',0.5), beta=self.config.get('beta',0.5), gamma=self.config.get('cval',15), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
+                    img = hessian(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), scale_range=self.config.get('scale_range',None), scale_step=self.config.get('scale_step',None), alpha=self.config.get('alpha',0.5), beta=self.config.get('beta',0.5), gamma=self.config.get('cval',15), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
 
                 data_copy[key]=img
         return data_copy
