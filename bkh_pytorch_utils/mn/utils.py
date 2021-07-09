@@ -65,7 +65,7 @@ class TransposeD(mn.transforms.Transform):
 
 class ApplySkimageFilterD(mn.transforms.RandomizableTransform):
     def __init__(self, keys:List[str], filter_name:str, config:dict, prob:float=0.1) -> None:
-        super().__init__(self, prob)
+        super().__init__(prob)
         self.keys=keys
         self.filter_name=filter_name
         self.config=config
