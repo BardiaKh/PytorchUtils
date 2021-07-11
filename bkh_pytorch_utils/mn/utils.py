@@ -18,18 +18,6 @@ def empty_monai_cache(cache_dir:str) -> None:
         shutil.rmtree(cache_dir+"/val")
         print("MOANI's validation cache directory removed successfully!")
 
-class FilterKeys(mn.transforms.Transform):
-    def __init__(self, include:List[str]) -> None:
-        super().__init__()
-        self.include=include
-
-    def __call__(self, data):
-        data_copy=copy.deepcopy(data)
-        for key in data:
-            if key not in self.include:
-                data_copy.pop(key,None)
-        return data_copy
-
 class EnsureGrayscaleD(mn.transforms.Transform):
     def __init__(self, keys:List[str]) -> None:
         super().__init__()

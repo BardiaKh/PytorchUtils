@@ -1,6 +1,5 @@
 from .mn.utils import (
     empty_monai_cache,
-    FilterKeys,
     EnsureGrayscaleD,
     TransposeD,
     ApplySkimageFilterD
