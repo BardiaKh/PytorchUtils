@@ -35,6 +35,19 @@ class BKhModule(pl.LightningModule):
         print("\n")
         print(f"Model Size: {self.model_size:.02F}MB")
 
+    def load_best_weights(self):
+        if self.trainer is None:
+            raise Exception("Use 'trainer.fit(Module)' first to allocated the module to the trainer.")
+
+        callbacks = self.trainer.callbacks
+        for callback in callbacks:
+            if isinstance(callback, pl.callbacks.ModelCheckpoint):
+                best_weight_path=callback.best_model_path
+                self.load_from_checkpoint(best_weight_path)
+
+                break
+        return
+
     def set_total_steps(self,steps=None,last_stepped_step=None):
         if steps is not None:
             self.total_steps=steps
