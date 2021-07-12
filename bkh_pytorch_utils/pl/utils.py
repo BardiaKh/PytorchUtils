@@ -43,7 +43,7 @@ class BKhModule(pl.LightningModule):
         for callback in callbacks:
             if isinstance(callback, pl.callbacks.ModelCheckpoint):
                 best_weight_path=callback.best_model_path
-                if best_weight_path.endswith(".ckpt")
+                if best_weight_path.endswith(".ckpt"):
                     self.load_from_checkpoint(best_weight_path)
                 else:
                     raise Exception("No valid checkpoint file is found.")
