@@ -35,7 +35,7 @@ class BKhModule(pl.LightningModule):
         print("\n")
         print(f"Model Size: {self.model_size:.02F}MB")
 
-    def load_best_weights(self):
+    def get_best_checkpoint_path(self):
         if self.trainer is None:
             raise Exception("Use 'trainer.fit(Module)' first to allocated the module to the trainer.")
 
@@ -44,12 +44,12 @@ class BKhModule(pl.LightningModule):
             if isinstance(callback, pl.callbacks.ModelCheckpoint):
                 best_weight_path=callback.best_model_path
                 if best_weight_path.endswith(".ckpt"):
-                    self.load_from_checkpoint(best_weight_path)
+                    return best_weight_path
                 else:
                     raise Exception("No valid checkpoint file is found.")
 
                 break
-        return
+        return None
 
     def set_total_steps(self,steps=None,last_stepped_step=None):
         if steps is not None:
