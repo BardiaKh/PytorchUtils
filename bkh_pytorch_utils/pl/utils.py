@@ -89,7 +89,5 @@ class BKhModule(pl.LightningModule):
 
     def on_validation_start(self):
         val_ds_length=len(self.val_dl.dataset)
-        self.val_stats['length'] = val_ds_length
-        self.val_stats['batch_size'] = self.val_dl.batch_size
         self.val_stats['targets'] = torch.empty((val_ds_length), dtype=torch.int64)
         self.val_stats['preds'] = torch.empty((val_ds_length), dtype=torch.int64)
