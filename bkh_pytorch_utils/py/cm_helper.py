@@ -137,7 +137,7 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
 
     #thanks for seaborn
     ax = sns.heatmap(df_cm, annot=annot, annot_kws={"size": fz}, linewidths=lw, ax=ax1,
-                    cbar=cbar, cmap=cmap, linecolor='#FFFFFF', fmt=fmt)
+                    cbar=cbar, cmap=cmap, linecolor='#FFFFFF', fmt=fmt, save_name=None)
 
     #set ticklabels rotation
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 0, fontsize = int(fz*0.9))
@@ -186,3 +186,6 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
     ax.set_ylabel(ylbl,fontsize=int(fz*1.1))
     plt.tight_layout()  #set layout slim
     plt.show()
+
+    if save_name is not None:
+        plt.savefig(f"{save_name}.png", dpi=600)
