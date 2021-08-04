@@ -156,7 +156,7 @@ def one_hot_encode(true_labels: torch.Tensor, classes: int, smoothing=0.0):
     return true_dist
 
 def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, annot:bool=True, cmap:str="Oranges",
-      fmt:str='.2f', fz:int=13, lw:float=0.5, cbar:bool=False, figsize:list=[9,9], show_null_values:int=1, pred_val_axis:str='x'):
+      fmt:str='.2f', fz:int=13, lw:float=0.5, cbar:bool=False, figsize:list=[9,9], show_null_values:int=1, pred_val_axis:str='x', save_name=None):
 
     if columns is None:
         columns = ['Class %s' %(i) for i in list(ascii_uppercase)[0:len(np.unique(targets))]]
@@ -164,7 +164,7 @@ def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, a
     matrix = confusion_matrix(targets, preds)
     df_cm = pd.DataFrame(matrix, index=columns, columns=columns)
 
-    pretty_plot_confusion_matrix(df_cm, fz=fz, cmap=cmap, figsize=figsize, annot=annot, fmt=fmt, lw=lw, cbar=cbar, show_null_values=show_null_values, pred_val_axis=pred_val_axis)
+    pretty_plot_confusion_matrix(df_cm, fz=fz, cmap=cmap, figsize=figsize, annot=annot, fmt=fmt, lw=lw, cbar=cbar, show_null_values=show_null_values, pred_val_axis=pred_val_axis, save_name = save_name)
 
 def add_weight_decay(model: torch.nn.Module, weight_decay:float=1e-5, skip_list:list=[]):
     #########################################################################################################

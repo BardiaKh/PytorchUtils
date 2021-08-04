@@ -108,7 +108,7 @@ def insert_totals(df_cm, xlbl, ylbl):
     df_cm.loc[f'Sum of   \n{xlbl}s'] = sum_col
 
 def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', fz=11,
-      lw=0.5, cbar=False, figsize=[8,8], show_null_values=0, pred_val_axis='y'):
+      lw=0.5, cbar=False, figsize=[8,8], show_null_values=0, pred_val_axis='y', save_name=None):
     """
       print conf matrix with default layout (like matlab)
       params:
@@ -137,7 +137,7 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
 
     #thanks for seaborn
     ax = sns.heatmap(df_cm, annot=annot, annot_kws={"size": fz}, linewidths=lw, ax=ax1,
-                    cbar=cbar, cmap=cmap, linecolor='#FFFFFF', fmt=fmt, save_name=None)
+                    cbar=cbar, cmap=cmap, linecolor='#FFFFFF', fmt=fmt)
 
     #set ticklabels rotation
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 0, fontsize = int(fz*0.9))
