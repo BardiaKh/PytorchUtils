@@ -1,15 +1,18 @@
+import os
 import torch
 from tabulate import tabulate
 import pytorch_lightning as pl
 
 class BKhModule(pl.LightningModule):
-    def __init__(self, collate_fn=None, sampler=None, train_ds=None, val_ds=None, batch_size=None):
+    def __init__(self, collate_fn=None, sampler=None, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None):
         super().__init__()
         self.collate_fn = collate_fn
         self.batch_size=batch_size
 
         self.total_steps = None
         self.last_stepped_step=-1
+
+        self.dl_workers = os.cpu_count() if dl_workers==-1 else dl_workers
 
         self.train_dl = None
         self.val_dl = None
@@ -61,12 +64,12 @@ class BKhModule(pl.LightningModule):
         return self.model(x)
 
     def set_train_dataset(self, ds, sampler=None, rtn=False):
-        self.train_dl=torch.utils.data.DataLoader(ds, batch_size=self.batch_size, sampler=sampler, shuffle=True if sampler is None else False, num_workers=4, collate_fn=self.collate_fn, pin_memory=False, drop_last=True, prefetch_factor=1)
+        self.train_dl=torch.utils.data.DataLoader(ds, batch_size=self.batch_size, sampler=sampler, shuffle=True if sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=True, prefetch_factor=1)
         if rtn:
             return self.train_dl
 
     def set_val_dataset(self, ds, rtn=False):
-        self.val_dl=torch.utils.data.DataLoader(ds, batch_size=self.batch_size, shuffle=False, num_workers=4, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
+        self.val_dl=torch.utils.data.DataLoader(ds, batch_size=self.batch_size, shuffle=False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
         if rtn:
             return self.val_dl
 
