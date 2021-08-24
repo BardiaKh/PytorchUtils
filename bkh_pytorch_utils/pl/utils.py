@@ -12,7 +12,7 @@ class BKhModule(pl.LightningModule):
         self.total_steps = None
         self.last_stepped_step=-1
 
-        self.dl_workers = os.cpu_count() if dl_workers==-1 else dl_workers
+        self.dl_workers = min(os.cpu_count()*2,8) if dl_workers==-1 else dl_workers
 
         self.train_dl = None
         self.val_dl = None
