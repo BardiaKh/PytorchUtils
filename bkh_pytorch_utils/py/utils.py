@@ -185,6 +185,7 @@ def add_weight_decay(model: torch.nn.Module, weight_decay:float=1e-5, skip_list:
         {'params': no_decay, 'weight_decay': 0.},
         {'params': decay, 'weight_decay': weight_decay},
     ]
+    
 def is_notebook_running():
     try:
         shell = get_ipython().__class__.__name__

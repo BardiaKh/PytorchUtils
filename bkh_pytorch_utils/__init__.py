@@ -12,5 +12,6 @@ from .py.utils import (
     get_data_stats,
     one_hot_encode,
     plot_confusion_matrix,
-    add_weight_decay
+    add_weight_decay,
+    is_notebook_running,
 )
