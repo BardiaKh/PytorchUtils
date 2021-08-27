@@ -168,7 +168,7 @@ def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, a
 
 def add_weight_decay(model: torch.nn.Module, weight_decay:float=1e-5, skip_list:list=[]):
     #########################################################################################################
-    ### Adapdet from: Adapted from: https://github.com/rwightman/pytorch-image-models/tree/master/timm
+    ### Adapted from: https://github.com/rwightman/pytorch-image-models/tree/master/timm
     #########################################################################################################
 
     decay = []
@@ -185,3 +185,14 @@ def add_weight_decay(model: torch.nn.Module, weight_decay:float=1e-5, skip_list:
         {'params': no_decay, 'weight_decay': 0.},
         {'params': decay, 'weight_decay': weight_decay},
     ]
+def is_notebook_running():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
