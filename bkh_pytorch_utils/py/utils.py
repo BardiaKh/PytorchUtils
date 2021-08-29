@@ -125,20 +125,20 @@ def seed_all(seed:int) -> None:
     mn.utils.misc.set_determinism(seed=seed)
     pl.seed_everything(seed,workers=True)
 
-def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, dims:int = 1)->None:
-    pixels_sum=torch.zeros(dims)
-    pixels_count=torch.zeros(dims)
-    sum_squared_err=torch.zeros(dims)
+def get_data_stat(dataset:torch.utils.data.Dataset, img_key:str, num_channels:int = 1)->None:
+    pixels_sum=torch.zeros(num_channels)
+    pixels_count=torch.zeros(num_channels)
+    sum_squared_err=torch.zeros(num_channels)
 
     for i,b in enumerate(tqdm(dataset)):
         image = b[img_key]
         pixels_sum = pixels_sum+image.sum((1,2))
-        pixels_count = pixels_count+torch.tensor([image.shape[1]*image.shape[2]]*dims)
+        pixels_count = pixels_count+torch.tensor([image.shape[1]*image.shape[2]]*num_channels)
 
     mean = pixels_sum/pixels_count
 
     for i,b in enumerate(tqdm(dataset)):
-        image = b[img_key].reshape(-1,dims)
+        image = b[img_key].reshape(-1,num_channels)
         sum_squared_err = sum_squared_err + ((image - mean).pow(2)).sum()
 
     std = torch.sqrt(sum_squared_err / pixels_count)
