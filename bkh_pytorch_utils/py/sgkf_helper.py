@@ -3,6 +3,7 @@
 #########################################################################################################
 
 import numpy as np
+from collections import defaultdict
 from sklearn.model_selection._split import _BaseKFold
 from sklearn.utils import check_random_state
 from sklearn.utils.multiclass import type_of_target
