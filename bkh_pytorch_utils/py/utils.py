@@ -1,6 +1,7 @@
 from typing import Union
 
 from .cm_helper import pretty_plot_confusion_matrix
+from .sgkf_helper import StratifiedGroupKFold
 
 import os
 import math
@@ -15,6 +16,7 @@ import pytorch_lightning as pl
 
 from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import KFold, GroupKFold, StratifiedKFold
 
 class CosineAnnealingWarmupRestarts(torch.optim.lr_scheduler._LRScheduler):
     def __init__(self,
@@ -197,3 +199,27 @@ def is_notebook_running():
             return False  # Other type (?)
     except NameError:
         return False      # Probably standard Python interpreter
+
+def split_data(df: pd.DataFrame, n_splits: int, y_column: str=None, group_column:str=None, fold_column: str="Fold"):
+    df = df.copy()
+
+    if y_column is None and group_column is None:
+        splitter = KFold(n_splits=n_splits)
+        print("Using simple KFold split...")
+    elif y_column is not None and group_column is None:
+        splitter = StratifiedKFold(n_splits=n_splits)
+        print("Using StratifiedKFold split...")
+    elif y_column is None and group_column is not None:
+        splitter = GroupKFold(n_splits=n_splits)
+        print("Using GroupKFold split...")
+    elif y_column is not None and group_column is not None:
+        splitter = StratifiedGroupKFold(n_splits=n_splits)
+        print("Using StratifiedGroupKFold split...")
+
+    df[fold_column] = 0
+
+    for fold_idx, (train_index, val_index) in enumerate(splitter.split(df, y=df[y_column].tolist() if y_column is not None else None, groups=df[group_column].tolist() if group_column is not None else None)):
+        df.loc[val_index,fold_column]=fold_idx
+
+    return df
+    
