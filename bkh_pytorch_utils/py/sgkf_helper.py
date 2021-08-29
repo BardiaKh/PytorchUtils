@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.model_selection._split import _BaseKFold
 from sklearn.utils import check_random_state
 from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import column_or_1d
 
 class StratifiedGroupKFold(_BaseKFold):
     """Stratified K-Folds iterator variant with non-overlapping groups.
