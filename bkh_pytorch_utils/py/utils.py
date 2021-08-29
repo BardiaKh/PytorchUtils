@@ -125,7 +125,7 @@ def seed_all(seed:int) -> None:
     mn.utils.misc.set_determinism(seed=seed)
     pl.seed_everything(seed,workers=True)
 
-def get_data_stat(dataset:torch.utils.data.Dataset, img_key:str, num_channels:int = 1)->None:
+def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, num_channels:int = 1)->None:
     pixels_sum=torch.zeros(num_channels)
     pixels_count=torch.zeros(num_channels)
     sum_squared_err=torch.zeros(num_channels)
