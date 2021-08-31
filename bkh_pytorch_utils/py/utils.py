@@ -55,7 +55,9 @@ class CosineAnnealingWarmupRestarts(torch.optim.lr_scheduler._LRScheduler):
             self.base_lrs.append(self.min_lr)
 
     def get_lr(self):
-        if self.step_in_cycle == -1:
+        if self.cycle>0 and self.cycle_mult==0:
+            return self.base_lrs
+        elif self.step_in_cycle == -1:
             return self.base_lrs
         elif self.step_in_cycle < self.warmup_steps:
             return [(self.max_lr - base_lr)*self.step_in_cycle / self.warmup_steps + base_lr for base_lr in self.base_lrs]
