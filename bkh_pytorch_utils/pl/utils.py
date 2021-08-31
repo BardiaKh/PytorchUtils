@@ -47,7 +47,7 @@ class BKhModule(pl.LightningModule):
                 break
         return None
 
-    def set_total_steps(self,steps=None,last_stepped_step=None):
+    def set_total_steps(self,steps=None,last_stepped_step=-1):
         if steps is not None:
             self.total_steps=steps
         if last_stepped_step is not None:
