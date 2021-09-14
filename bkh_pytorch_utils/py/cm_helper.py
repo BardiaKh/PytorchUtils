@@ -185,7 +185,9 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
     ax.set_xlabel(xlbl,fontsize=int(fz*1.1))
     ax.set_ylabel(ylbl,fontsize=int(fz*1.1))
     plt.tight_layout()  #set layout slim
-    plt.show()
 
     if save_name is not None:
         plt.savefig(f"{save_name}.png", dpi=600)
+        plt.close()
+    else:
+        plt.show()
