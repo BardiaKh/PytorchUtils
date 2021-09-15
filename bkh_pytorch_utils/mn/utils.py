@@ -29,9 +29,12 @@ class EnsureGrayscaleD(mn.transforms.Transform):
             if key in self.keys:
                 img=data[key].copy()
 
-                if len(img.shape)==2:
+                if len(img.shape)==2: # Back & White
                     img=np.expand_dims(img,axis=0)
-                elif img.shape[-1]>2:
+                elif img.shape[0]==1 or img.shape[0]==3: # Channel First
+                    img=np.mean(img,axis=0)
+                    img=np.expand_dims(img,axis=0)
+                elif img.shape[-1]==1 or img.shape[-1]==3: # Channel Last
                     img=np.mean(img,axis=2)
                     img=np.expand_dims(img,axis=0)
 
