@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="bkh_pytorch_utils",
-    version="0.0.14",
+    version="0.0.15",
     author="Bardia Khosravi",
     author_email="bardiakhosravi95@gmail.com",
     description="A rapid prototyping tool for MONAI & PyTorch Lightning",

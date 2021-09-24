@@ -1,7 +1,6 @@
 from typing import Union
 
 from .cm_helper import pretty_plot_confusion_matrix
-from .sgkf_helper import StratifiedGroupKFold
 
 import os
 import math
@@ -16,7 +15,7 @@ import pytorch_lightning as pl
 
 from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import KFold, GroupKFold, StratifiedKFold
+from sklearn.model_selection import KFold, GroupKFold, StratifiedKFold, StratifiedGroupKFold
 
 class CosineAnnealingWarmupRestarts(torch.optim.lr_scheduler._LRScheduler):
     def __init__(self,
