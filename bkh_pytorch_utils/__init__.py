@@ -2,7 +2,7 @@ from .mn.utils import (
     empty_monai_cache,
     EnsureGrayscaleD,
     TransposeD,
-    ApplySkimageFilterD
+    RandAugD
 )
 from .pl.utils import BKhModule
 from .py.utils import (

@@ -3,11 +3,13 @@ from typing import List, Tuple, Dict, Union
 import os
 import copy
 import shutil
-from skimage.filters import unsharp_mask, meijering, sato, scharr, hessian
-from skimage.exposure import equalize_hist, equalize_adapthist
+from PIL import Image as Img
 
 import numpy as np
 import monai as mn
+
+import timm
+import torch
 
 def empty_monai_cache(cache_dir:str) -> None:
     if os.path.exists(cache_dir+"/train"):
@@ -55,44 +57,78 @@ class TransposeD(mn.transforms.Transform):
                 data_copy[key]=self.transposer(img)
         return data_copy
 
-class ApplySkimageFilterD(mn.transforms.RandomizableTransform):
-    def __init__(self, keys:List[str], filter_name:str, config:dict, prob:float=0.1) -> None:
-        super().__init__(prob)
-        self.keys=keys
-        self.filter_name=filter_name
-        self.config=config
+class ConvertToPIL(mn.transforms.Transform):
+    def __init__(self, mode:str="RGB") -> None:
+        super().__init__()
+        self.mode=mode.upper()
 
     def __call__(self, data):
-        super().randomize(None)
+        img=data.copy()
+        img=self.to_numpy(img)
 
-        if not self._do_transform:
+        if self.mode=="RGB":
+            if len(img.shape)==2:
+                img = np.expand_dims(img,axis=-1)
+                img = np.concatenate([img,img,img], axis=2)
+            elif len(img.shape)==3:
+                if img.shape[0]==1 or img.shape[0]==3:
+                    img = img.transpose(1,2,0)
+
+                if img.shape[-1]==1:
+                    img = np.concatenate([img,img,img], axis=2)
+
+        if self.mode=="L":
+            if len(img.shape)==2:
+                img = np.expand_dims(img,axis=-1)
+            elif len(img.shape)==3:
+                if img.shape[-1]==3:
+                    img = np.mean(img, axis=-1)
+
+        img = Img.fromarray(img.astype('uint8'), self.mode)
+            
+        return img
+    
+    def to_numpy(self, data):
+        if isinstance(data, torch.Tensor):
+            return data.numpy()
+        elif isinstance(data, np.ndarray):
             return data
-
+    
+class RandAugD(mn.transforms.RandomizableTransform):
+    def __init__(self, keys:List[str], pil_conversion_mode:str = "RGB", m:int=9, n:int=2, mstd:float=0.5, convert_to_numpy:bool=True) -> None:
+        super().__init__()
+        self.keys=keys
+        self.converter = ConvertToPIL(mode=pil_conversion_mode)
+        self.convert_to_numpy = convert_to_numpy
+        timm.data.auto_augment._RAND_TRANSFORMS  = [
+            'AutoContrast',
+            'Equalize',
+            #'Invert',
+            'Rotate',
+            #'Posterize',
+            #'Solarize',
+            #'SolarizeAdd',
+            #'Color',
+            'Contrast',
+            'Brightness',
+            'Sharpness',
+            'ShearX',
+            'ShearY',
+            'TranslateXRel',
+            'TranslateYRel',
+        ]
+        self.augmentor = timm.data.auto_augment.rand_augment_transform(config_str=f"rand-n{n}-m{m}-mstd{mstd}", hparams={})
+        
+    def __call__(self, data):
         data_copy=copy.deepcopy(data)
         for key in data:
             if key in self.keys:
-                img=data[key].copy()
-
-                if self.filter_name == 'equalize_hist':
-                    img = equalize_hist(img, nbins= self.config.get('nbins',256), mask=self.config.get('mask',None))
-
-                if self.filter_name == 'equalize_adapthist':
-                    img = equalize_adapthist(img, kernel_size=self.config.get('kernel_size',None), clip_limit=self.config.get('clip_limit',0.01), nbins=self.config.get('nbins',256))
-
-                if self.filter_name == 'unsharp_mask':
-                    img = unsharp_mask(img, radius=self.config.get('radius',5), amount=self.config.get('amount',2))
-
-                if self.filter_name == 'meijering':
-                    img = meijering(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), alpha=self.config.get('alpha',None), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
-
-                if self.filter_name == 'sato':
-                    img = sato(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
-
-                if self.filter_name == 'scharr':
-                    img = scharr(img, mask=self.config.get('mask',None), axis=self.config.get('axis',None), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
-
-                if self.filter_name == 'hessian':
-                    img = hessian(img, sigmas=self.config.get('sigmas',range(1, 10, 2)), scale_range=self.config.get('scale_range',None), scale_step=self.config.get('scale_step',None), alpha=self.config.get('alpha',0.5), beta=self.config.get('beta',0.5), gamma=self.config.get('cval',15), black_ridges=self.config.get('black_ridges',True), mode=self.config.get('mode','reflect'), cval=self.config.get('cval',0))
-
-                data_copy[key]=img
+                img = data[key].copy()
+                img = self.converter(img)
+                img = self.augmentor(img)
+                
+                if self.convert_to_numpy:
+                    img = np.array(img)
+                    
+                data_copy[key] = img
         return data_copy
