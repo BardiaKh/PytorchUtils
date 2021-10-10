@@ -22,7 +22,7 @@ setuptools.setup(
         "tqdm>4.60.0",
         "monai>=0.5.2",
         "pytorch-lightning>=1.3.0",
-        "scikit-learn>=0.20.0",
+        "scikit-learn>=1.0.0",
         "seaborn>=0.11.0",
         "scikit-image>=0.18.0",
     ],
