@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from .ddp_helper import DistributedProxySampler
 
 class BKhModule(pl.LightningModule):
-    def __init__(self, collate_fn=None, sampler=None, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None, ddp_sampler=False):
+    def __init__(self, collate_fn=None, sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None):
         super().__init__()
         self.collate_fn = collate_fn
         self.batch_size = batch_size
