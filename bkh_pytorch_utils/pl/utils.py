@@ -91,13 +91,13 @@ class BKhModule(pl.LightningModule):
         if self.val_ds is None:
             raise Exception("Use the 'set_val_dataset' method to set the validation dataset.")
         else:
-           if self.ddp_sampler:
+            if self.ddp_sampler:
                 if self.val_sampler is None:
                     instance_sampler = DistributedSampler(self.val_ds)
                 else:
                     instance_sampler = DistributedProxySampler(self.val_sampler)
             else:
-                instance_sampler = self.train_sampler
+                instance_sampler = self.val_sampler
 
             self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
             return self.val_dl
