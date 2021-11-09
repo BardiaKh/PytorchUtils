@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from .ddp_helper import DistributedProxySampler
 
 class BKhModule(pl.LightningModule):
-    def __init__(self, collate_fn=None, sampler=None, use_val_sampler=False, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None):
+    def __init__(self, collate_fn=None, train_sampler=None, val_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None):
         super().__init__()
         self.collate_fn = collate_fn
         self.batch_size = batch_size
@@ -23,8 +23,8 @@ class BKhModule(pl.LightningModule):
         self.train_dl = None
         self.val_dl = None
 
-        self.sampler = sampler
-        self.use_val_sampler = use_val_sampler
+        self.train_sampler = train_sampler
+        self.val_sampler = val_sampler
         self.ddp_sampler = ddp_sampler
 
         if train_ds is not None:
@@ -77,12 +77,12 @@ class BKhModule(pl.LightningModule):
             raise Exception("Use the 'set_train_dataset' method to set the training dataset.")
         else:
             if self.ddp_sampler:
-                if self.sampler is None:
+                if self.train_sampler is None:
                     instance_sampler = DistributedSampler(self.train_ds)
                 else:
-                    instance_sampler = DistributedProxySampler(self.sampler)
+                    instance_sampler = DistributedProxySampler(self.train_sampler)
             else:
-                instance_sampler = self.sampler
+                instance_sampler = self.train_sampler
 
             self.train_dl = torch.utils.data.DataLoader(self.train_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=True, prefetch_factor=1)
             return self.train_dl
@@ -91,22 +91,16 @@ class BKhModule(pl.LightningModule):
         if self.val_ds is None:
             raise Exception("Use the 'set_val_dataset' method to set the validation dataset.")
         else:
-            if self.use_val_sampler:
-                if self.ddp_sampler:
-                    if self.sampler is None:
-                        instance_sampler = DistributedSampler(self.train_ds)
-                    else:
-                        instance_sampler = DistributedProxySampler(self.sampler)
-                else:
-                    instance_sampler = self.sampler
-            else:
-                if self.ddp_sampler:
+           if self.ddp_sampler:
+                if self.val_sampler is None:
                     instance_sampler = DistributedSampler(self.val_ds)
                 else:
-                    instance_sampler = None
+                    instance_sampler = DistributedProxySampler(self.val_sampler)
+            else:
+                instance_sampler = self.train_sampler
 
-                self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
-                return self.val_dl
+            self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
+            return self.val_dl
 
     def get_progress_bar_dict(self):
         items = super().get_progress_bar_dict()
