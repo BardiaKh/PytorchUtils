@@ -38,8 +38,11 @@ class BKhModule(pl.LightningModule):
         freezed_params = sum(p.numel() for p in self.model.parameters() if not p.requires_grad)
 
         print(tabulate([["Learnable",trainable_params],["Freezed",freezed_params],["Total",trainable_params+freezed_params]],headers=['Params','Count'],tablefmt='orgtbl', colalign=("left","right")))
-        print("\n")
-        print(f"Model Size: {self.model_size:.02F}MB")
+        print(
+            "\n",
+            f"Model Size: {pl.utilities.memory.get_model_size_mb(self):.02F}MB",
+            "\n",
+        )
 
     def get_best_checkpoint_path(self):
         if self.trainer is None:
@@ -102,7 +105,7 @@ class BKhModule(pl.LightningModule):
             self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
             return self.val_dl
 
-    def get_progress_bar_dict(self):
-        items = super().get_progress_bar_dict()
+    def get_metrics(self, trainer, model):
+        items = super().get_metrics(trainer, model)
         items.pop("v_num", None)
         return items
