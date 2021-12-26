@@ -15,4 +15,5 @@ from .py.utils import (
     add_weight_decay,
     is_notebook_running,
     split_data,
+    load_weights
 )
