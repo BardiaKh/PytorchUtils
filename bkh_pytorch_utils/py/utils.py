@@ -180,7 +180,7 @@ def load_weights(model, weight_path: str = None):
     model_dict = model.state_dict()
     weights = {k: v for k, v in weights.items() if k in model_dict}
     model_dict.update(weights) 
-    model.load_state_dict(weights)
+    model.load_state_dict(model_dict)
 
     return model
 
