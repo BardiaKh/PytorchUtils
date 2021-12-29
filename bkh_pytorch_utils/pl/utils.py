@@ -102,7 +102,7 @@ class BKhModule(pl.LightningModule):
             else:
                 instance_sampler = self.val_sampler
 
-            self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
+            self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
             return self.val_dl
 
     def get_metrics(self, trainer, model):
