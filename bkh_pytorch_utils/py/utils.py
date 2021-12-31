@@ -175,7 +175,7 @@ def plot_confusion_matrix(preds:np.array, targets:np.array, columns:list=None, a
     pretty_plot_confusion_matrix(df_cm, fz=fz, cmap=cmap, figsize=figsize, annot=annot, fmt=fmt, lw=lw, cbar=cbar, show_null_values=show_null_values, pred_val_axis=pred_val_axis, save_name = save_name)
 
 def load_weights(model: torch.nn.Module, weight_path: str = None):
-    weights = torch.load(f)
+    weights = torch.load(weight_path)
     model_dict = model.state_dict()
     weights = {k: v for k, v in weights.items() if k in model_dict}
     model_dict.update(weights) 
