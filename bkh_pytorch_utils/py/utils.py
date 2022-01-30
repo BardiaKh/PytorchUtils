@@ -216,11 +216,13 @@ def is_notebook_running():
     except NameError:
         return False      # Probably standard Python interpreter
 
-def split_data(df: pd.DataFrame, n_splits: int, y_column: str=None, group_column:str=None, fold_column: str="Fold", shuffle=False, random_state=42):
+def split_data(df: pd.DataFrame, n_splits: int, y_column: str=None, group_column:str=None, fold_column: str="Fold", shuffle=False, random_state=None):
     df = df.copy()
 
-    if not shuffle:
-        random_state=None
+    if random_state is not None:
+        shuffle = True
+    elif shuffle and random_state is None:
+        random_state = 42
 
     if y_column is None and group_column is None:
         splitter = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
