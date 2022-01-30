@@ -216,20 +216,23 @@ def is_notebook_running():
     except NameError:
         return False      # Probably standard Python interpreter
 
-def split_data(df: pd.DataFrame, n_splits: int, y_column: str=None, group_column:str=None, fold_column: str="Fold", random_state=None):
+def split_data(df: pd.DataFrame, n_splits: int, y_column: str=None, group_column:str=None, fold_column: str="Fold", shuffle=False, random_state=42):
     df = df.copy()
 
+    if not shuffle:
+        random_state=None
+
     if y_column is None and group_column is None:
-        splitter = KFold(n_splits=n_splits, random_state=random_state)
+        splitter = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         print("Using simple KFold split...")
     elif y_column is not None and group_column is None:
-        splitter = StratifiedKFold(n_splits=n_splits, random_state=random_state)
+        splitter = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         print("Using StratifiedKFold split...")
     elif y_column is None and group_column is not None:
-        splitter = GroupKFold(n_splits=n_splits, random_state=random_state)
+        splitter = GroupKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         print("Using GroupKFold split...")
     elif y_column is not None and group_column is not None:
-        splitter = StratifiedGroupKFold(n_splits=n_splits, random_state=random_state)
+        splitter = StratifiedGroupKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         print("Using StratifiedGroupKFold split...")
 
     df[fold_column] = 0
