@@ -4,7 +4,10 @@ from .mn.utils import (
     TransposeD,
     RandAugD
 )
-from .pl.utils import BKhModule
+from .pl.utils import (
+    BKhModule,
+    EMA,
+)
 from .py.utils import (
     CosineAnnealingWarmupRestarts,
     NonSparseCrossEntropyLoss,
