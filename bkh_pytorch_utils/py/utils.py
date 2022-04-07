@@ -4,6 +4,7 @@ from .cm_helper import pretty_plot_confusion_matrix
 
 import os
 import math
+import copy
 import random
 import pickle
 import torch
@@ -93,28 +94,6 @@ class CosineAnnealingWarmupRestarts(torch.optim.lr_scheduler._LRScheduler):
         self.last_epoch = math.floor(epoch)
         for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group['lr'] = lr
-
-class NonSparseCrossEntropyLoss(torch.nn.modules.loss._WeightedLoss):
-    def __init__(self, weight=None, reduction='mean'):
-        super().__init__(weight=weight, reduction=reduction)
-        self.weight = weight
-        self.reduction = reduction
-
-    def forward(self, inputs, targets):
-        lsm = torch.nn.functional.log_softmax(inputs, -1)
-
-        if self.weight is not None:
-            lsm = lsm * self.weight.unsqueeze(0)
-
-        loss = -(targets * lsm).sum(-1)
-
-        if self.reduction == 'sum':
-            loss = loss.sum()
-        elif self.reduction == 'mean':
-            loss = loss.mean()
-
-        return loss
-
 
 def seed_all(seed:int) -> None:
     random.seed(seed)
