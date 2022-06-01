@@ -25,6 +25,7 @@ setuptools.setup(
         "scikit-learn>=1.0.0",
         "seaborn>=0.11.0",
         "scikit-image>=0.18.0",
+        "overrides>=6.1.0"
     ],
     python_requires='>=3.6',
 )

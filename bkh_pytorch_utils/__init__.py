@@ -10,7 +10,6 @@ from .pl.utils import (
 )
 from .py.utils import (
     CosineAnnealingWarmupRestarts,
-    NonSparseCrossEntropyLoss,
     seed_all,
     get_data_stats,
     one_hot_encode,
