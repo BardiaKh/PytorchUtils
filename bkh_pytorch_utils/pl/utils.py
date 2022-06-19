@@ -134,9 +134,10 @@ class EMA(pl.Callback):
           resource. In addition, we want to avoid duplicated operations in ranks != 0 to reduce jitter and improve
           performance.
     """
-    def __init__(self, decay: float = 0.9999, ema_device: Optional[Union[torch.device, str]] = None, pin_memory=True):
+    def __init__(self, decay: float = 0.9999, ema_interval_steps: int = 1, ema_device: Optional[Union[torch.device, str]] = None, pin_memory=True):
         super().__init__()
         self.decay = decay
+        self.ema_interval_steps = ema_interval_steps
         self.ema_device: str = f"{ema_device}" if ema_device else None  # perform ema on different device from the model
         self.ema_pin_memory = pin_memory if torch.cuda.is_available() else False  # Only works if CUDA is available
         self.ema_state_dict: Dict[str, torch.Tensor] = {}
@@ -170,12 +171,13 @@ class EMA(pl.Callback):
         self._ema_state_dict_ready = True
 
     @rank_zero_only
-    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: pl.LightningModule, *args, **kwargs) -> None:
+    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: pl.LightningModule, outputs, batch, batch_idx, *args, **kwargs) -> None:
         # Update EMA weights
-        with torch.no_grad():
-            for key, value in self.get_state_dict(pl_module).items():
-                ema_value = self.ema_state_dict[key]
-                ema_value.copy_(self.decay * ema_value + (1. - self.decay) * value, non_blocking=True)
+        if batch_idx % self.ema_interval_steps == 0:
+            with torch.no_grad():
+                for key, value in self.get_state_dict(pl_module).items():
+                    ema_value = self.ema_state_dict[key]
+                    ema_value.copy_(self.decay * ema_value + (1. - self.decay) * value, non_blocking=True)
 
     @overrides
     def on_validation_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
