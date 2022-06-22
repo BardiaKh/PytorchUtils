@@ -143,7 +143,6 @@ class EMA(pl.Callback):
         self.ema_state_dict: Dict[str, torch.Tensor] = {}
         self.original_state_dict = {}
         self._ema_state_dict_ready = False
-        self.decay = decay.to(self.ema_device)
 
 
     @staticmethod
@@ -178,8 +177,9 @@ class EMA(pl.Callback):
         if batch_idx % self.ema_interval_steps == 0:
             with torch.no_grad():
                 for key, value in self.get_state_dict(pl_module).items():
-                    ema_value = self.ema_state_dict[key].to(device=self.ema_device)
-                    ema_value.copy_(self.decay * ema_value + (1. - self.decay) * value, non_blocking=True)
+                    ema_value = self.ema_state_dict[key]
+                    value_ = value.to(device=ema_value.device)
+                    ema_value.copy_(self.decay * ema_value + (1. - self.decay) * value_, non_blocking=True)
 
     @overrides
     def on_validation_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
