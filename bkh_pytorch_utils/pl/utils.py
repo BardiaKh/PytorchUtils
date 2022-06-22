@@ -176,7 +176,7 @@ class EMA(pl.Callback):
         if batch_idx % self.ema_interval_steps == 0:
             with torch.no_grad():
                 for key, value in self.get_state_dict(pl_module).items():
-                    ema_value = self.ema_state_dict[key].to(device=self.ema_device.device)
+                    ema_value = self.ema_state_dict[key].to(device=self.ema_device)
                     ema_value.copy_(self.decay * ema_value + (1. - self.decay) * value, non_blocking=True)
 
     @overrides
