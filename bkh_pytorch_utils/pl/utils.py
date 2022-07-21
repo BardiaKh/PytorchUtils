@@ -134,11 +134,12 @@ class EMA(pl.Callback):
           resource. In addition, we want to avoid duplicated operations in ranks != 0 to reduce jitter and improve
           performance.
     """
-    def __init__(self, decay: float = 0.9999, ema_interval_steps: int = 1, ema_device: Optional[Union[torch.device, str]] = None, pin_memory=True):
+    def __init__(self, decay: float = 0.9999, ema_interval_steps: int = 1, ema_device: Optional[Union[torch.device, str]] = None, use_ema_for_validation: bool = True, pin_memory=True):
         super().__init__()
         self.decay = decay
         self.ema_interval_steps = ema_interval_steps
         self.ema_device: str = f"{ema_device}" if ema_device else "cude:0"  # perform ema on different device from the model
+        self.use_ema_for_validation = use_ema_for_validation
         self.ema_pin_memory = pin_memory if torch.cuda.is_available() else False  # Only works if CUDA is available
         self.ema_state_dict: Dict[str, torch.Tensor] = {}
         self.original_state_dict = {}
@@ -183,7 +184,7 @@ class EMA(pl.Callback):
 
     @overrides
     def on_validation_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
-        if not self._ema_state_dict_ready:
+        if not self._ema_state_dict_ready or not self.use_ema_for_validation:
             return  # Skip Lightning sanity validation check if no ema weights has been loaded from a checkpoint.
 
         self.original_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
@@ -200,7 +201,7 @@ class EMA(pl.Callback):
 
     @overrides
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        if not self._ema_state_dict_ready:
+        if not self._ema_state_dict_ready or not self.use_ema_for_validation:
             return  # Skip Lightning sanity validation check if no ema weights has been loaded from a checkpoint.
 
         # Replace EMA weights with training weights
