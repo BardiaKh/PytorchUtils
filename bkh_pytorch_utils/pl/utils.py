@@ -138,7 +138,7 @@ class EMA(pl.Callback):
         super().__init__()
         self.decay = decay
         self.ema_interval_steps = ema_interval_steps
-        self.ema_device: str = f"{ema_device}" if ema_device else "cude:0"  # perform ema on different device from the model
+        self.ema_device: str = f"{ema_device}" if ema_device else "cuda:0"  # perform ema on different device from the model
         self.use_ema_for_validation = use_ema_for_validation
         self.ema_pin_memory = pin_memory if torch.cuda.is_available() else False  # Only works if CUDA is available
         self.ema_state_dict: Dict[str, torch.Tensor] = {}
