@@ -20,6 +20,11 @@ def empty_monai_cache(cache_dir:str) -> None:
         shutil.rmtree(cache_dir+"/val")
         print("MOANI's validation cache directory removed successfully!")
 
+    if os.path.exists(cache_dir+"/test"):
+        shutil.rmtree(cache_dir+"/test")
+        print("MOANI's test cache directory removed successfully!")
+
+
 class EnsureGrayscaleD(mn.transforms.Transform):
     def __init__(self, keys:List[str]) -> None:
         super().__init__()

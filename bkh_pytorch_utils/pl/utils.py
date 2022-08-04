@@ -12,10 +12,13 @@ from pytorch_lightning.utilities import rank_zero_only
 from .ddp_helper import DistributedProxySampler
 
 class BKhModule(pl.LightningModule):
-    def __init__(self, collate_fn=None, train_sampler=None, val_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None):
+    def __init__(self, collate_fn=None, val_collate_fn=None, train_sampler=None, val_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None, val_batch_size=None):
         super().__init__()
         self.collate_fn = collate_fn
         self.batch_size = batch_size
+        self.val_batch_size = val_batch_size if val_batch_size is not None else batch_size
+        self.val_collate_fn = val_collate_fn if val_collate_fn is not None else collate_fn
+
 
         self.total_steps = None
         self.last_stepped_step = -1
@@ -107,7 +110,7 @@ class BKhModule(pl.LightningModule):
             else:
                 instance_sampler = self.val_sampler
 
-            self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
+            self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.val_batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.val_collate_fn, pin_memory=False, drop_last=False, prefetch_factor=1)
             return self.val_dl
 
     def get_metrics(self, trainer, model):
