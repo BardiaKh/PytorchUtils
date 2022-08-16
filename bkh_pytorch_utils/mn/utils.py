@@ -44,22 +44,10 @@ class EnsureGrayscaleD(mn.transforms.Transform):
                 elif img.shape[-1]==1 or img.shape[-1]==3: # Channel Last
                     img=np.mean(img,axis=2)
                     img=np.expand_dims(img,axis=0)
+                elif len(img.shape)==3 and img.shape[0]!=1 and img.shape[-1]!=1:
+                    img=np.expand_dims(img,axis=0)
 
                 data_copy[key]=img
-        return data_copy
-
-class TransposeD(mn.transforms.Transform):
-    def __init__(self, keys:List[str], indices:tuple) -> None:
-        super().__init__()
-        self.keys=keys
-        self.transposer=mn.transforms.Transpose(indices)
-
-    def __call__(self, data):
-        data_copy=copy.deepcopy(data)
-        for key in data:
-            if key in self.keys:
-                img=data[key].copy()
-                data_copy[key]=self.transposer(img)
         return data_copy
 
 class ConvertToPIL(mn.transforms.Transform):
