@@ -12,7 +12,7 @@ from pytorch_lightning.utilities import rank_zero_only
 from .ddp_helper import DistributedProxySampler
 
 class BKhModule(pl.LightningModule):
-    def __init__(self, collate_fn=None, val_collate_fn=None, train_sampler=None, val_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None, val_batch_size=None):
+    def __init__(self, collate_fn=None, val_collate_fn=None, train_sampler=None, val_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None, val_batch_size=None, pin_memory=True):
         super().__init__()
         self.collate_fn = collate_fn
         self.batch_size = batch_size
@@ -34,6 +34,8 @@ class BKhModule(pl.LightningModule):
         self.train_sampler = train_sampler
         self.val_sampler = val_sampler
         self.ddp_sampler = ddp_sampler
+
+        self.pin_memory = pin_memory
 
         if train_ds is not None:
             self.set_train_dataset(train_ds)
@@ -95,7 +97,7 @@ class BKhModule(pl.LightningModule):
             else:
                 instance_sampler = self.train_sampler
 
-            self.train_dl = torch.utils.data.DataLoader(self.train_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=True, drop_last=True, prefetch_factor=1)
+            self.train_dl = torch.utils.data.DataLoader(self.train_ds, batch_size=self.batch_size, sampler=instance_sampler, shuffle=True if instance_sampler is None else False, num_workers=self.dl_workers, collate_fn=self.collate_fn, pin_memory=self.pin_memory, drop_last=True, prefetch_factor=0 if self.dl_workers==0 else 1)
             return self.train_dl
 
     def val_dataloader(self):
@@ -110,7 +112,7 @@ class BKhModule(pl.LightningModule):
             else:
                 instance_sampler = self.val_sampler
 
-            self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.val_batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.val_collate_fn, pin_memory=True, drop_last=False, prefetch_factor=1)
+            self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.val_batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.val_collate_fn, pin_memory=self.pin_memory, drop_last=False, prefetch_factor=0 if self.dl_workers==0 else 1)
             return self.val_dl
 
     def get_metrics(self, trainer, model):
