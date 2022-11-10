@@ -34,7 +34,7 @@ class EnsureGrayscaleD(mn.transforms.Transform):
         data_copy=copy.deepcopy(data)
         for key in data:
             if key in self.keys:
-                img=data[key].copy()
+                img=data[key]
 
                 if len(img.shape)==2: # Back & White
                     img=np.expand_dims(img,axis=0)
@@ -56,7 +56,7 @@ class ConvertToPIL(mn.transforms.Transform):
         self.mode=mode.upper()
 
     def __call__(self, data):
-        img=data.copy()
+        img=copy.deepcopy(data)
         img=self.to_numpy(img)
 
         if self.mode=="RGB":
@@ -116,7 +116,7 @@ class RandAugD(mn.transforms.RandomizableTransform):
         data_copy=copy.deepcopy(data)
         for key in data:
             if key in self.keys:
-                img = data[key].copy()
+                img = data[key]
                 img = self.converter(img)
                 img = self.augmentor(img)
                 

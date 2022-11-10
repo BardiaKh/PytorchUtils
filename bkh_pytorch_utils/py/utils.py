@@ -96,6 +96,11 @@ class CosineAnnealingWarmupRestarts(torch.optim.lr_scheduler._LRScheduler):
             param_group['lr'] = lr
 
 def seed_all(seed:int) -> None:
+    """Seeds basic parameters for reproductibility of results.
+
+    Args:
+        seed (int): seed to use
+    """
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
