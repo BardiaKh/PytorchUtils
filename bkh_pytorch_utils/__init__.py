@@ -6,7 +6,6 @@ from .mn.utils import (
 from .pl.utils import (
     BKhModule,
     EMA,
-    ExhaustiveWeightedRandomSampler,
 )
 from .py.utils import (
     seed_all,
@@ -16,5 +15,6 @@ from .py.utils import (
     add_weight_decay,
     is_notebook_running,
     split_data,
-    load_weights
+    load_weights,
+    ExhaustiveWeightedRandomSampler,
 )
