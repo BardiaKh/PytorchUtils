@@ -20,7 +20,7 @@ setuptools.setup(
         "torch>=1.4",
         "tabulate>=0.8.9",
         "tqdm>4.60.0",
-        "monai>=0.5.2",
+        "monai>=1.0.0",
         "pytorch-lightning<=1.6.4",
         "scikit-learn>=1.0.0",
         "seaborn>=0.11.0",

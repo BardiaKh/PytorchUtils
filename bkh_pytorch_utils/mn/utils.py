@@ -25,30 +25,28 @@ def empty_monai_cache(cache_dir:str) -> None:
         print("MOANI's test cache directory removed successfully!")
 
 
-class EnsureGrayscaleD(mn.transforms.Transform):
+class EnsureGrayscaleD(mn.transforms.MapTransform):
     def __init__(self, keys:List[str]) -> None:
-        super().__init__()
-        self.keys=keys
+        super().__init__(keys)
 
     def __call__(self, data):
-        data_copy=copy.deepcopy(data)
-        for key in data:
-            if key in self.keys:
-                img=data[key]
+        d = dict(data)
+        for key in self.key_iterator(d):
+            img=d[key]
 
-                if len(img.shape)==2: # Back & White
-                    img=np.expand_dims(img,axis=0)
-                elif img.shape[0]==1 or img.shape[0]==3: # Channel First
-                    img=np.mean(img,axis=0)
-                    img=np.expand_dims(img,axis=0)
-                elif img.shape[-1]==1 or img.shape[-1]==3: # Channel Last
-                    img=np.mean(img,axis=2)
-                    img=np.expand_dims(img,axis=0)
-                elif len(img.shape)==3 and img.shape[0]!=1 and img.shape[-1]!=1:
-                    img=np.expand_dims(img,axis=0)
+            if len(img.shape)==2: # Back & White
+                img=np.expand_dims(img,axis=0)
+            elif img.shape[0]==1 or img.shape[0]==3: # Channel First
+                img=np.mean(img,axis=0)
+                img=np.expand_dims(img,axis=0)
+            elif img.shape[-1]==1 or img.shape[-1]==3: # Channel Last
+                img=np.mean(img,axis=2)
+                img=np.expand_dims(img,axis=0)
+            elif len(img.shape)==3 and img.shape[0]!=1 and img.shape[-1]!=1:
+                img=np.expand_dims(img,axis=0)
 
-                data_copy[key]=img
-        return data_copy
+            d[key]=img
+        return d
 
 class ConvertToPIL(mn.transforms.Transform):
     def __init__(self, mode:str="RGB") -> None:
@@ -87,10 +85,9 @@ class ConvertToPIL(mn.transforms.Transform):
         elif isinstance(data, np.ndarray):
             return data
     
-class RandAugD(mn.transforms.RandomizableTransform):
+class RandAugD(mn.transforms.MapTransform):
     def __init__(self, keys:List[str], pil_conversion_mode:str = "RGB", m:int=9, n:int=2, mstd:float=0.5, convert_to_numpy:bool=True) -> None:
-        super().__init__()
-        self.keys=keys
+        super().__init__(keys)
         self.converter = ConvertToPIL(mode=pil_conversion_mode)
         self.convert_to_numpy = convert_to_numpy
         timm.data.auto_augment._RAND_TRANSFORMS  = [
@@ -113,15 +110,14 @@ class RandAugD(mn.transforms.RandomizableTransform):
         self.augmentor = timm.data.auto_augment.rand_augment_transform(config_str=f"rand-n{n}-m{m}-mstd{mstd}", hparams={})
         
     def __call__(self, data):
-        data_copy=copy.deepcopy(data)
-        for key in data:
-            if key in self.keys:
-                img = data[key]
-                img = self.converter(img)
-                img = self.augmentor(img)
+        d = dict(data)
+        for key in self.key_iterator(d):
+            img = d[key]
+            img = self.converter(img)
+            img = self.augmentor(img)
+            
+            if self.convert_to_numpy:
+                img = np.array(img)
                 
-                if self.convert_to_numpy:
-                    img = np.array(img)
-                    
-                data_copy[key] = img
-        return data_copy
+            d[key] = img
+        return d

@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Iterator, Sequence
 
 from .cm_helper import pretty_plot_confusion_matrix
 
@@ -8,6 +8,7 @@ import copy
 import random
 import pickle
 import torch
+from torch.utils.data.sampler import WeightedRandomSampler
 
 import numpy as np
 import pandas as pd
@@ -18,82 +19,6 @@ import pytorch_lightning as pl
 from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import KFold, GroupKFold, StratifiedKFold, StratifiedGroupKFold
-
-class CosineAnnealingWarmupRestarts(torch.optim.lr_scheduler._LRScheduler):
-    def __init__(self,
-                 optimizer : torch.optim.Optimizer,
-                 first_cycle_steps : int,
-                 cycle_mult : float = 1.,
-                 max_lr : float = 0.1,
-                 min_lr : float = 0.001,
-                 warmup_steps : int = 0,
-                 gamma : float = 1.,
-                 last_epoch : int = -1
-        ):
-        assert warmup_steps < first_cycle_steps
-
-        self.first_cycle_steps = first_cycle_steps # first cycle step size
-        self.cycle_mult = cycle_mult # cycle steps magnification
-        self.base_max_lr = max_lr # first max learning rate
-        self.max_lr = max_lr # max learning rate in the current cycle
-        self.min_lr = min_lr # min learning rate
-        self.warmup_steps = warmup_steps # warmup step size
-        self.gamma = gamma # decrease rate of max learning rate by cycle
-
-        self.cur_cycle_steps = first_cycle_steps # first cycle step size
-        self.cycle = 0 # cycle count
-        self.step_in_cycle = last_epoch # step size of the current cycle
-
-        super(CosineAnnealingWarmupRestarts, self).__init__(optimizer, last_epoch)
-
-        # set learning rate min_lr
-        self.init_lr()
-
-    def init_lr(self):
-        self.base_lrs = []
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.min_lr
-            self.base_lrs.append(self.min_lr)
-
-    def get_lr(self):
-        if self.cycle>0 and self.cycle_mult==0:
-            return self.base_lrs
-        elif self.step_in_cycle == -1:
-            return self.base_lrs
-        elif self.step_in_cycle < self.warmup_steps:
-            return [(self.max_lr - base_lr)*self.step_in_cycle / self.warmup_steps + base_lr for base_lr in self.base_lrs]
-        else:
-            return [base_lr + (self.max_lr - base_lr) \
-                    * (1 + math.cos(math.pi * (self.step_in_cycle-self.warmup_steps) \
-                                    / (self.cur_cycle_steps - self.warmup_steps))) / 2
-                    for base_lr in self.base_lrs]
-
-    def step(self, epoch=None):
-        if epoch is None:
-            epoch = self.last_epoch + 1
-            self.step_in_cycle = self.step_in_cycle + 1
-            if self.step_in_cycle >= self.cur_cycle_steps:
-                self.cycle += 1
-                self.step_in_cycle = self.step_in_cycle - self.cur_cycle_steps
-                self.cur_cycle_steps = int((self.cur_cycle_steps - self.warmup_steps) * self.cycle_mult) + self.warmup_steps
-        else:
-            if epoch >= self.first_cycle_steps:
-                if self.cycle_mult == 1.:
-                    self.step_in_cycle = epoch % self.first_cycle_steps
-                    self.cycle = epoch // self.first_cycle_steps
-                else:
-                    n = int(math.log((epoch / self.first_cycle_steps * (self.cycle_mult - 1) + 1), self.cycle_mult))
-                    self.cycle = n
-                    self.step_in_cycle = epoch - int(self.first_cycle_steps * (self.cycle_mult ** n - 1) / (self.cycle_mult - 1))
-                    self.cur_cycle_steps = self.first_cycle_steps * self.cycle_mult ** (n)
-            else:
-                self.cur_cycle_steps = self.first_cycle_steps
-                self.step_in_cycle = epoch
-
-        self.max_lr = self.base_max_lr * (self.gamma**self.cycle)
-        self.last_epoch = math.floor(epoch)
-        for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
-            param_group['lr'] = lr
 
 def seed_all(seed:int) -> None:
     """Seeds basic parameters for reproductibility of results.
@@ -228,3 +153,58 @@ def split_data(df: pd.DataFrame, n_splits: int, y_column: str=None, group_column
 
     return df
     
+class ExhaustiveWeightedRandomSampler(WeightedRandomSampler):
+    #########################################################################################################
+    ### Adapted from: https://github.com/louis-she/exhaustive-weighted-random-sampler
+    #########################################################################################################
+    """ExhaustiveWeightedRandomSampler behaves pretty much the same as WeightedRandomSampler
+    except that it receives an extra parameter, exaustive_weight, which is the weight of the
+    elements that should be sampled exhaustively over multiple iterations.
+    This is useful when the dataset is very big and also very imbalanced, like the negative
+    sample is way more than positive samples, we want to over sample positive ones, but also
+    iterate over all the negative samples as much as we can.
+    Args:
+        weights (sequence): a sequence of weights, not necessary summing up to one
+        num_samples (int): number of samples to draw
+        exaustive_weight (int): which weight of samples should be sampled exhaustively,
+            normally this is the one that should not been over sampled, like the lowest
+            weight of samples in the dataset.
+        generator (Generator): Generator used in sampling.
+    """
+
+    def __init__(
+        self,
+        weights: Sequence[float],
+        num_samples: int,
+        exaustive_weight=1,
+        generator=None,
+    ) -> None:
+        super().__init__(weights, num_samples, True, generator)
+        self.all_indices = torch.tensor(list(range(num_samples)))
+        self.exaustive_weight = exaustive_weight
+        self.weights_mapping = torch.tensor(weights) == self.exaustive_weight
+        self.remaining_indices = torch.tensor([], dtype=torch.long)
+
+    def get_remaining_indices(self) -> torch.Tensor:
+        remaining_indices = self.weights_mapping.nonzero().squeeze()
+        return remaining_indices[torch.randperm(len(remaining_indices))]
+
+    def __iter__(self) -> Iterator[int]:
+        rand_tensor = torch.multinomial(
+            self.weights, self.num_samples, self.replacement, generator=self.generator
+        )
+        exaustive_indices = rand_tensor[
+            self.weights_mapping[rand_tensor].nonzero().squeeze()
+        ]
+        while len(exaustive_indices) > len(self.remaining_indices):
+            self.remaining_indices = torch.cat(
+                [self.remaining_indices, self.get_remaining_indices()]
+            )
+        yield_indexes, self.remaining_indices = (
+            self.remaining_indices[: len(exaustive_indices)],
+            self.remaining_indices[len(exaustive_indices) :],
+        )
+        rand_tensor[
+            (rand_tensor[..., None] == exaustive_indices).any(-1).nonzero().squeeze()
+        ] = yield_indexes
+        yield from iter(rand_tensor.tolist())
