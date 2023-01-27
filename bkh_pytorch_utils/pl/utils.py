@@ -212,7 +212,7 @@ class EMA(pl.Callback):
     @overrides
     def on_save_checkpoint(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]
-    ) -> dict:
+    ) -> None:
         checkpoint["ema_state_dict"] = self.ema_state_dict
         checkpoint["_ema_state_dict_ready"] = self._ema_state_dict_ready
 
