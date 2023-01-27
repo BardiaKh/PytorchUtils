@@ -117,11 +117,6 @@ class BKhModule(pl.LightningModule):
             self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.val_batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.val_collate_fn, pin_memory=self.pin_memory, drop_last=False, prefetch_factor=self.prefetch_factor, persistent_workers=self.persistent_workers)
             return self.val_dl
 
-    def get_metrics(self, trainer, model):
-        items = super().get_metrics(trainer, model)
-        items.pop("v_num", None)
-        return items
-
 class EMA(pl.Callback):
     """Implements EMA (exponential moving average) to any kind of model.
     EMA weights will be used during validation and stored separately from original model weights.
@@ -218,11 +213,12 @@ class EMA(pl.Callback):
     def on_save_checkpoint(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]
     ) -> dict:
-        return {"ema_state_dict": self.ema_state_dict, "_ema_state_dict_ready": self._ema_state_dict_ready}
+        checkpoint["ema_state_dict"] = self.ema_state_dict
+        checkpoint["_ema_state_dict_ready"] = self._ema_state_dict_ready
 
     @overrides
     def on_load_checkpoint(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", callback_state: Dict[str, Any]
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]
     ) -> None:
-        self._ema_state_dict_ready = callback_state["_ema_state_dict_ready"]
-        self.ema_state_dict = callback_state["ema_state_dict"]
+        self._ema_state_dict_ready = checkpoint["_ema_state_dict_ready"]
+        self.ema_state_dict = checkpoint["ema_state_dict"]
