@@ -18,3 +18,6 @@ from .py.utils import (
     load_weights,
     ExhaustiveWeightedRandomSampler,
 )
+from .py.optim import (
+    Lion,
+)
