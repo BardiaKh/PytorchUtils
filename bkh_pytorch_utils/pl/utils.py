@@ -190,7 +190,7 @@ class EMA(pl.Callback):
             return  # Skip Lightning sanity validation check if no ema weights has been loaded from a checkpoint.
 
         self.original_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
-        ema_state_dict = pl_module.trainer.training_type_plugin.broadcast(self.ema_state_dict, 0)
+        ema_state_dict = pl_module.trainer.strategy.broadcast(self.ema_state_dict, 0)
         self.ema_state_dict = ema_state_dict
         assert self.ema_state_dict.keys() == self.original_state_dict.keys(), \
             f"There are some keys missing in the ema static dictionary broadcasted. " \
