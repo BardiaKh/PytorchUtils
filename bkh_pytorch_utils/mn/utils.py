@@ -68,7 +68,7 @@ class ConvertToPIL(mn.transforms.Transform):
                     img = img[:3,:,:]
                 
                 if img.shape[0]==1 or img.shape[0]==3:
-                    img = img.transpose(2,1,0)
+                    img = img.transpose(1,2,0)
 
                 if img.shape[-1]==1:
                     img = np.concatenate([img,img,img], axis=2)
