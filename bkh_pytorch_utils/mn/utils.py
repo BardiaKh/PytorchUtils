@@ -62,8 +62,13 @@ class ConvertToPIL(mn.transforms.Transform):
                 img = np.expand_dims(img,axis=-1)
                 img = np.concatenate([img,img,img], axis=2)
             elif len(img.shape)==3:
+                if img.shape[-1]==4: # Fixing RGBA
+                    img = img[:,:,:3]
+                elif img.shape[0]==4:
+                    img = img[:3,:,:]
+                
                 if img.shape[0]==1 or img.shape[0]==3:
-                    img = img.transpose(1,2,0)
+                    img = img.transpose(2,1,0)
 
                 if img.shape[-1]==1:
                     img = np.concatenate([img,img,img], axis=2)
@@ -72,8 +77,10 @@ class ConvertToPIL(mn.transforms.Transform):
             if len(img.shape)==2:
                 img = np.expand_dims(img,axis=-1)
             elif len(img.shape)==3:
-                if img.shape[-1]==3:
+                if img.shape[-1]==3 or img.shape[-1]==4: # Channel Last
                     img = np.mean(img, axis=-1)
+                elif img.shape[0]==3 or img.shape[0]==4: # Channel First
+                    img = np.mean(img, axis=0)
 
         img = Img.fromarray(img.astype('uint8'), self.mode)
             
