@@ -88,6 +88,9 @@ class ConvertToPIL(mn.transforms.Transform):
                 elif img.shape[-1]==1:
                     img = img[:,:,0]
 
+                if self.transpose:
+                    img = img.transpose(1,0)
+
         img = Img.fromarray(img.astype('uint8'), self.mode)
             
         return img
