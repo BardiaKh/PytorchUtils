@@ -49,9 +49,10 @@ class EnsureGrayscaleD(mn.transforms.MapTransform):
         return d
 
 class ConvertToPIL(mn.transforms.Transform):
-    def __init__(self, mode:str="RGB") -> None:
+    def __init__(self, mode:str="RGB", transpose=True) -> None:
         super().__init__()
         self.mode=mode.upper()
+        self.transpose=transpose
 
     def __call__(self, data):
         img=copy.deepcopy(data)
@@ -64,11 +65,15 @@ class ConvertToPIL(mn.transforms.Transform):
             elif len(img.shape)==3:
                 if img.shape[-1]==4: # Fixing RGBA
                     img = img[:,:,:3]
+                    print(img.shape)
                 elif img.shape[0]==4:
                     img = img[:3,:,:]
                 
-                if img.shape[0]==1 or img.shape[0]==3:
-                    img = img.transpose(1,2,0)
+                if self.transpose:
+                    if img.shape[0]==1 or img.shape[0]==3:
+                        img = img.transpose(2,1,0)
+                    elif img.shape[-1]==1 or img.shape[-1]==3:
+                        img = img.transpose(1,0,2)
 
                 if img.shape[-1]==1:
                     img = np.concatenate([img,img,img], axis=2)
