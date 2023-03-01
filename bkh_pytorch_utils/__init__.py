@@ -1,6 +1,7 @@
 from .mn.utils import (
     empty_monai_cache,
     EnsureGrayscaleD,
+    ConvertToPIL,
     RandAugD
 )
 from .pl.utils import (
