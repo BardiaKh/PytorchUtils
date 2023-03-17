@@ -44,11 +44,12 @@ class BKhModule(pl.LightningModule):
     def stats(self):
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         freezed_params = sum(p.numel() for p in self.model.parameters() if not p.requires_grad)
-
-        print(tabulate([["Learnable",trainable_params],["Freezed",freezed_params],["Total",trainable_params+freezed_params]],headers=['Params','Count'],tablefmt='orgtbl', colalign=("left","right")))
+        total_params = trainable_params+freezed_params
+        total_size = total_params * 4 / (1024 ** 2)
+        print(tabulate([["Learnable",trainable_params],["Freezed",freezed_params],["Total",total_params]],headers=['Params','Count'],tablefmt='orgtbl', colalign=("left","right")))
         print(
             "\n",
-            f"Model Size: {pl.utilities.memory.get_model_size_mb(self):.02F}MB",
+            f"Model Size: {total_size}MB",
             "\n",
         )
 
