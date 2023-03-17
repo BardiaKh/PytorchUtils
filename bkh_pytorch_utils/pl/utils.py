@@ -49,7 +49,7 @@ class BKhModule(pl.LightningModule):
         print(tabulate([["Learnable",trainable_params],["Freezed",freezed_params],["Total",total_params]],headers=['Params','Count'],tablefmt='orgtbl', colalign=("left","right")))
         print(
             "\n",
-            f"Model Size: {total_size}MB",
+            f"Model Size: {total_size:0.2f}MB",
             "\n",
         )
 
