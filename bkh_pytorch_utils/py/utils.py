@@ -140,7 +140,9 @@ def split_data(df: pd.DataFrame, n_splits: int, y_column: str=None, group_column
         splitter = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         print("Using StratifiedKFold split...")
     elif y_column is None and group_column is not None:
-        splitter = GroupKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+        splitter = GroupKFold(n_splits=n_splits)
+        if shuffle:
+            print("GroupKFold does not support shuffle. Setting shuffle to False...")
         print("Using GroupKFold split...")
     elif y_column is not None and group_column is not None:
         splitter = StratifiedGroupKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
