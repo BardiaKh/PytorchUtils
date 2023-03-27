@@ -230,7 +230,7 @@ class Mixup:
         if self.one_hot_encode:
             target = mixup_target(target, self.num_classes, lam, self.label_smoothing, x.device)
         else:
-            target = mixup_target_one_hot(target, self.num_classes, lam, self.label_smoothing)
+            target = mixup_target_one_hot(target, lam, self.label_smoothing)
         return x, target
 
 
@@ -330,7 +330,7 @@ class FastCollateMixup(Mixup):
         if self.one_hot_encode:
             target = mixup_target(target, self.num_classes, lam, self.label_smoothing, device='cpu')
         else:
-            target = mixup_target_one_hot(target, self.num_classes, lam, self.label_smoothing)
+            target = mixup_target_one_hot(target, lam, self.label_smoothing)
 
         target = target[:batch_size]
         return output, target
