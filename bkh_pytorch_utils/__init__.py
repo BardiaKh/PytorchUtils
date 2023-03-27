@@ -23,5 +23,5 @@ from .py.optim import (
     Lion,
 )
 from .py.mixup import (
-    MixUp,
+    Mixup,
 )
