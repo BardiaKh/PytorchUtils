@@ -22,3 +22,6 @@ from .py.utils import (
 from .py.optim import (
     Lion,
 )
+from .py.mixup import (
+    MixUp,
+)
