@@ -110,10 +110,10 @@ class Mixup:
         correct_lam (bool): apply lambda correction when cutmix bbox clipped by image borders
         label_smoothing (float): apply label smoothing to the mixed target tensor
         num_classes (int): number of classes for target
-        one_hot_label (bool): whether to convert to one-hot labels
+        one_hot_encode (bool): whether to convert to one-hot labels
     """
     def __init__(self, mixup_alpha=1., cutmix_alpha=0., cutmix_minmax=None, prob=1.0, switch_prob=0.5,
-                 mode='batch', correct_lam=True, label_smoothing=0.1, num_classes=1000, one_hot_label=True):
+                 mode='batch', correct_lam=True, label_smoothing=0.1, num_classes=1000, one_hot_encode=True):
         self.mixup_alpha = mixup_alpha
         self.cutmix_alpha = cutmix_alpha
         self.cutmix_minmax = cutmix_minmax
@@ -128,7 +128,7 @@ class Mixup:
         self.mode = mode
         self.correct_lam = correct_lam  # correct lambda based on clipped area for cutmix
         self.mixup_enabled = True  # set to false to disable mixing (intended tp be set by train loop)
-        self.one_hot_label = one_hot_label
+        self.one_hot_encode = one_hot_encode
 
     def _params_per_elem(self, batch_size):
         lam = np.ones(batch_size, dtype=np.float32)
@@ -227,7 +227,7 @@ class Mixup:
         else:
             lam = self._mix_batch(x)
 
-        if self.one_hot_label:
+        if self.one_hot_encode:
             target = mixup_target(target, self.num_classes, lam, self.label_smoothing, x.device)
         else:
             target = mixup_target_one_hot(target, self.num_classes, lam, self.label_smoothing)
@@ -327,7 +327,7 @@ class FastCollateMixup(Mixup):
             lam = self._mix_batch_collate(output, batch)
         target = torch.tensor([b[1] for b in batch], dtype=torch.int64)
 
-        if self.one_hot_label:
+        if self.one_hot_encode:
             target = mixup_target(target, self.num_classes, lam, self.label_smoothing, device='cpu')
         else:
             target = mixup_target_one_hot(target, self.num_classes, lam, self.label_smoothing)
