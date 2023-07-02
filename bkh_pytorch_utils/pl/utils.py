@@ -52,6 +52,15 @@ class BKhModule(pl.LightningModule):
             f"Model Size: {total_size:0.2f}MB",
             "\n",
         )
+        
+    def compile(self):
+        torch_version = tuple(map(int, torch.__version__.split('.')))
+        if torch_version < (2, 0, 0):
+            print("Model compilation is only supported for torch>=2.0.0")
+        else:
+            self.original_model = copy.deepcopy(self.model)
+            self.model = torch.compile(self.original_model)
+            print(f"Model is now compiled using torch.")
 
     def get_best_checkpoint_path(self):
         if self.trainer is None:
