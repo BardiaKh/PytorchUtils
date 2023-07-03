@@ -54,7 +54,7 @@ class BKhModule(pl.LightningModule):
         )
         
     def compile(self):
-        torch_version = tuple(map(int, torch.__version__.split('.')))
+        torch_version = tuple(map(int, torch.__version__.split("+")[0].split('.')))
         if torch_version < (2, 0, 0):
             print("Model compilation is only supported for torch>=2.0.0")
         else:
