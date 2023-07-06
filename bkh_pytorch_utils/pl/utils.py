@@ -58,7 +58,7 @@ class BKhModule(pl.LightningModule):
         if torch_version < (2, 0, 0):
             raise Exception("Model compilation is only supported for torch>=2.0.0")
         else:
-            torch.compile(self.model, mode='reduce-overhead')
+            self.model = torch.compile(self.model, mode='reduce-overhead')
             print(f"Model is now compiled using torch.")
             
     def load_ckpt(self, checkpoint_path, ema=True, strict=True):
@@ -73,7 +73,7 @@ class BKhModule(pl.LightningModule):
         weights = checkpoint[checkpoint_key]
         first_key = list(weights.keys())[0]
         if first_key.split(".")[1] == "_orig_mod":
-            print("Ckeckpoint file is from a compiled model. Compiling the model first...")
+            print("Checkpoint file is from a compiled model. Compiling the model first...")
             self.compile()
         
         self.load_state_dict(weights, strict=strict)
