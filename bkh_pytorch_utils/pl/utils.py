@@ -56,11 +56,27 @@ class BKhModule(pl.LightningModule):
     def compile(self):
         torch_version = tuple(map(int, torch.__version__.split("+")[0].split('.')))
         if torch_version < (2, 0, 0):
-            print("Model compilation is only supported for torch>=2.0.0")
+            raise Exception("Model compilation is only supported for torch>=2.0.0")
         else:
-            self.original_model = copy.deepcopy(self.model)
-            self.model = torch.compile(self.original_model)
+            torch.compile(self.model, mode='reduce-overhead')
             print(f"Model is now compiled using torch.")
+            
+    def load_ckpt(self, checkpoint_path, ema=True, strict=True):
+        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        if ema and "ema_state_dict" in checkpoint:
+            checkpoint_key = "ema_state_dict"
+        else:
+            if ema:
+                print("Checkpoint does not contain 'ema_state_dict' key. Using 'state_dict' instead.")
+            checkpoint_key = "state_dict"
+        
+        weights = checkpoint[checkpoint_key]
+        first_key = list(weights.keys())[0]
+        if first_key.split(".")[1] == "_orig_mod":
+            print("Ckeckpoint file is from a compiled model. Compiling the model first...")
+            self.compile()
+        
+        self.load_state_dict(weights, strict=strict)
 
     def get_best_checkpoint_path(self):
         if self.trainer is None:
