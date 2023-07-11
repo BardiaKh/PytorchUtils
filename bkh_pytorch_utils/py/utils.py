@@ -1,4 +1,4 @@
-from typing import Iterator, Sequence
+from typing import Iterator, Sequence, Union, List
 
 from .cm_helper import pretty_plot_confusion_matrix
 
@@ -93,25 +93,30 @@ def load_weights(model: torch.nn.Module, weight_path: str = None):
     return model
 
 
-def add_weight_decay(model: torch.nn.Module, weight_decay:float=1e-5, skip_list:list=[]):
+def add_weight_decay(models: Union[torch.nn.Module, List[torch.nn.Module]], weight_decay:float=1e-5, skip_list:list=[]):
     #########################################################################################################
     ### Adapted from: https://github.com/rwightman/pytorch-image-models/tree/master/timm
     #########################################################################################################
-
-    decay = []
-    no_decay = []
-    for name, param in model.named_parameters():
-        if not param.requires_grad:
-            continue  # frozen weights
-        if len(param.shape) == 1 or name.endswith(".bias") or name in skip_list:
-            no_decay.append(param)
-        else:
-            decay.append(param)
-
-    return [
-        {'params': no_decay, 'weight_decay': 0.},
-        {'params': decay, 'weight_decay': weight_decay},
-    ]
+    if not isinstance(models, list):
+        models = [models]
+    
+    params = []
+    for model in models:
+        decay = []
+        no_decay = []
+        for name, param in model.named_parameters():
+            if not param.requires_grad:
+                continue  # frozen weights
+            if len(param.shape) == 1 or name.endswith(".bias") or name in skip_list:
+                no_decay.append(param)
+            else:
+                decay.append(param)
+        params.append([
+            {'params': no_decay, 'weight_decay': 0.},
+            {'params': decay, 'weight_decay': weight_decay},
+        ])
+    
+    return params
     
 def is_notebook_running():
     try:

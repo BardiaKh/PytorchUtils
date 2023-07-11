@@ -11,19 +11,13 @@ import monai as mn
 import timm
 import torch
 
-def empty_monai_cache(cache_dir:str) -> None:
-    if os.path.exists(cache_dir+"/train"):
-        shutil.rmtree(cache_dir+"/train")
-        print("MOANI's train cache directory removed successfully!")
-
-    if os.path.exists(cache_dir+"/val"):
-        shutil.rmtree(cache_dir+"/val")
-        print("MOANI's validation cache directory removed successfully!")
-
-    if os.path.exists(cache_dir+"/test"):
-        shutil.rmtree(cache_dir+"/test")
-        print("MOANI's test cache directory removed successfully!")
-
+def empty_monai_cache(cache_dir:str, subsets = ["train", "val", "test"]) -> None:
+    for subset in subsets:
+        if os.path.exists(cache_dir+"/"+subset):
+            shutil.rmtree(cache_dir+"/"+subset)
+            print(f"MOANI's {subset} cache directory removed successfully!")
+        else:
+            print(f"MOANI's {subset} cache directory does not exist!")
 
 class EnsureGrayscaleD(mn.transforms.MapTransform):
     def __init__(self, keys:List[str]) -> None:
