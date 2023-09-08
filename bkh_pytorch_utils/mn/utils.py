@@ -28,15 +28,17 @@ class EnsureGrayscaleD(mn.transforms.MapTransform):
         for key in self.key_iterator(d):
             img=d[key]
 
+            acceptable_channels = [1, 3, 4]
+
             if len(img.shape)==2: # Back & White
                 img=np.expand_dims(img,axis=0)
-            elif img.shape[0]==1 or img.shape[0]==3: # Channel First
+            elif img.shape[0] in acceptable_channels: # Channel First
                 img=np.mean(img,axis=0)
                 img=np.expand_dims(img,axis=0)
-            elif img.shape[-1]==1 or img.shape[-1]==3: # Channel Last
+            elif img.shape[-1] in acceptable_channels: # Channel Last
                 img=np.mean(img,axis=2)
                 img=np.expand_dims(img,axis=0)
-            elif len(img.shape)==3 and img.shape[0]!=1 and img.shape[-1]!=1:
+            elif len(img.shape)==3 and img.shape[0]!=1 and img.shape[-1]!=1: #3D image
                 img=np.expand_dims(img,axis=0)
 
             d[key]=img
