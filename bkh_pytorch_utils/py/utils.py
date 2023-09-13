@@ -19,6 +19,7 @@ import pytorch_lightning as pl
 from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import KFold, GroupKFold, StratifiedKFold, StratifiedGroupKFold
+from concurrent.futures import ProcessPoolExecutor
 
 def seed_all(seed:int) -> None:
     """Seeds basic parameters for reproductibility of results.
@@ -36,7 +37,7 @@ def seed_all(seed:int) -> None:
     mn.utils.misc.set_determinism(seed=seed)
     pl.seed_everything(seed,workers=True)
 
-def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, num_channels:int = 1)->None:
+def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, num_channels:int = 1, num_workers: int = 4) -> None:
     #########################################################################################################
     ### Adapted from: https://github.com/Nikronic/CoarseNet/blob/master/utils/preprocess.py#L142-L200
     #########################################################################################################
@@ -47,33 +48,34 @@ def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, num_channels:i
     - dataset: a PyTorch Dataset object
     - img_key: the key to extract the image tensor from the sample
     - num_channels: number of image channels
+    - num_workers: number of processes to use for parallel computation
 
     Returns: None (prints mean and std)
     """
+    def _compute_image_stats(image):
+        """Compute the sum, squared sum, and number of pixels of an image."""
+        dims = list(range(1, len(image.shape)))
+        
+        sum_ = image.sum(dim=dims)
+        sum_of_square = (image**2).sum(dim=dims)
+        nb_pixels = torch.prod(torch.tensor(image.shape[1:])).item()
+
+        return sum_, sum_of_square, nb_pixels
+
     # Initializations
     cnt = 0
     fst_moment = torch.zeros(num_channels)
     snd_moment = torch.zeros(num_channels)
 
-    for b in tqdm(dataset, desc="Computing stats"):
-        image = b[img_key]
+    # Use a ProcessPoolExecutor to parallelize the computation
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        # Map _compute_image_stats function over the dataset
+        results = list(tqdm(executor.map(_compute_image_stats, [b[img_key] for b in dataset]), total=len(dataset), desc="Computing mean"))
 
-        # Determine if image is 2D or 3D
-        if len(image.shape) == 3:  # 2D image [channel, height, width]
-            _, h, w = image.shape
-            d = 1
-        else:  # 3D image [channel, depth, height, width]
-            _, d, h, w = image.shape
-
-        nb_pixels = d * h * w
-        sum_ = image.sum(dim=list(range(1, len(image.shape))))
-        
-        # Image squaring and summing
-        sum_of_square = (image**2).sum(dim=list(range(1, len(image.shape))))
-
+    # Aggregate results
+    for sum_, sum_of_square, nb_pixels in results:
         fst_moment = (cnt * fst_moment + sum_) / (cnt + nb_pixels)
         snd_moment = (cnt * snd_moment + sum_of_square) / (cnt + nb_pixels)
-
         cnt += nb_pixels
 
     mean = fst_moment
