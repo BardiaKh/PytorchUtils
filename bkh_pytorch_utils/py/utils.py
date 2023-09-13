@@ -50,19 +50,27 @@ def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, num_channels:i
 
     Returns: None (prints mean and std)
     """
-    
     # Initializations
     cnt = 0
     fst_moment = torch.zeros(num_channels)
     snd_moment = torch.zeros(num_channels)
 
-    for b in tqdm(dataset, desc="Computing mean"):
+    for b in tqdm(dataset, desc="Computing stats"):
         image = b[img_key]
-        b, h, w = image.shape[0], image.shape[2], image.shape[3]
-        nb_pixels = b * h * w
-        sum_ = image.sum(dim=[0, 2, 3])
-        sum_of_square = (image**2).sum(dim=[0, 2, 3])
+
+        # Determine if image is 2D or 3D
+        if len(image.shape) == 3:  # 2D image [channel, height, width]
+            _, h, w = image.shape
+            d = 1
+        else:  # 3D image [channel, depth, height, width]
+            _, d, h, w = image.shape
+
+        nb_pixels = d * h * w
+        sum_ = image.sum(dim=list(range(1, len(image.shape))))
         
+        # Image squaring and summing
+        sum_of_square = (image**2).sum(dim=list(range(1, len(image.shape))))
+
         fst_moment = (cnt * fst_moment + sum_) / (cnt + nb_pixels)
         snd_moment = (cnt * snd_moment + sum_of_square) / (cnt + nb_pixels)
 
