@@ -19,7 +19,6 @@ import pytorch_lightning as pl
 from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import KFold, GroupKFold, StratifiedKFold, StratifiedGroupKFold
-from concurrent.futures import ProcessPoolExecutor
 
 def seed_all(seed:int) -> None:
     """Seeds basic parameters for reproductibility of results.
@@ -42,7 +41,7 @@ def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, num_channels:i
     ### Adapted from: https://github.com/Nikronic/CoarseNet/blob/master/utils/preprocess.py#L142-L200
     #########################################################################################################
     """
-    Compute dataset mean and standard deviation in an online manner.
+    Compute dataset mean and standard deviation in an online manner using DataLoader and multiprocessing.
 
     Args:
     - dataset: a PyTorch Dataset object
@@ -53,27 +52,23 @@ def get_data_stats(dataset:torch.utils.data.Dataset, img_key:str, num_channels:i
     Returns: None (prints mean and std)
     """
     def _compute_image_stats(image):
-        """Compute the sum, squared sum, and number of pixels of an image."""
-        dims = list(range(1, len(image.shape)))
+        """Compute the sum, squared sum, and number of pixels for a single image."""
+        sum_ = image.sum()
+        sum_of_square = (image**2).sum()
+        nb_pixels = torch.prod(torch.tensor(image.shape)).item()
         
-        sum_ = image.sum(dim=dims)
-        sum_of_square = (image**2).sum(dim=dims)
-        nb_pixels = torch.prod(torch.tensor(image.shape[1:])).item()
-
         return sum_, sum_of_square, nb_pixels
+
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, num_workers=num_workers)
 
     # Initializations
     cnt = 0
     fst_moment = torch.zeros(num_channels)
     snd_moment = torch.zeros(num_channels)
 
-    # Use a ProcessPoolExecutor to parallelize the computation
-    with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        # Map _compute_image_stats function over the dataset
-        results = list(tqdm(executor.map(_compute_image_stats, [b[img_key] for b in dataset]), total=len(dataset), desc="Computing mean"))
-
-    # Aggregate results
-    for sum_, sum_of_square, nb_pixels in results:
+    # Using tqdm to show progress for data loading
+    for sample in tqdm(dataloader, desc="Computing mean"):
+        sum_, sum_of_square, nb_pixels = _compute_image_stats(sample[img_key])
         fst_moment = (cnt * fst_moment + sum_) / (cnt + nb_pixels)
         snd_moment = (cnt * snd_moment + sum_of_square) / (cnt + nb_pixels)
         cnt += nb_pixels
