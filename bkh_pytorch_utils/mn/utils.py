@@ -3,6 +3,7 @@ from typing import List, Tuple, Dict, Union
 import os
 import copy
 import shutil
+import subprocess
 from PIL import Image as Img
 
 import numpy as np
@@ -12,12 +13,22 @@ import timm
 import torch
 
 def empty_monai_cache(cache_dir:str, subsets = ["train", "val", "test"]) -> None:
+    # Create an empty directory for rsync trick
+    empty_dir = "/tmp/empty_dir_for_rsync"
+    if not os.path.exists(empty_dir):
+        os.mkdir(empty_dir)
+
     for subset in subsets:
-        if os.path.exists(cache_dir+"/"+subset):
-            shutil.rmtree(cache_dir+"/"+subset)
-            print(f"MOANI's {subset} cache directory removed successfully!")
+        subset_path = os.path.join(cache_dir, subset)
+        if os.path.exists(subset_path):
+            # Use rsync to quickly delete files
+            subprocess.call(['rsync', '-a', '--delete', f'{empty_dir}/', subset_path])
+            print(f"MONAI's {subset} cache directory removed successfully!")
         else:
-            print(f"MOANI's {subset} cache directory does not exist!")
+            print(f"MONAI's {subset} cache directory does not exist!")
+
+    # Cleanup temporary empty directory
+    os.rmdir(empty_dir)
 
 class EnsureGrayscaleD(mn.transforms.MapTransform):
     def __init__(self, keys:List[str]) -> None:
