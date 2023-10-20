@@ -21,7 +21,7 @@ setuptools.setup(
         "tabulate>=0.8.9",
         "tqdm>4.60.0",
         "monai>=1.0.0",
-        "pytorch-lightning>=2.0.0",
+        "pytorch-lightning==2.0.0",
         "scikit-learn>=1.0.0",
         "seaborn>=0.11.0",
         "scikit-image>=0.18.0",
