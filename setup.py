@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/BardiaKh/PytorchUtils",
-    packages=setuptools.find_packages("bkh_pytorch_utils"),
+    packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -33,6 +33,5 @@ setuptools.setup(
         "overrides>=6.1.0",
         "timm>=0.5.0",
     ],
-    package_dir = {"": "bkh_pytorch_utils"},
     python_requires='>=3.6',
 )
