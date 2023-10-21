@@ -1,13 +1,18 @@
 import setuptools
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
 setuptools.setup(
     name="bkh_pytorch_utils",
-    version="0.8.9",
+    version="0.9.0",
     author="Bardia Khosravi",
     author_email="bardiakhosravi95@gmail.com",
     description="A rapid prototyping tool for MONAI & PyTorch Lightning",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/BardiaKh/PytorchUtils",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages("bkh_pytorch_utils"),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -21,12 +26,13 @@ setuptools.setup(
         "tabulate>=0.8.9",
         "tqdm>4.60.0",
         "monai>=1.0.0",
-        "pytorch-lightning>=2.0.0",
+        "pytorch-lightning==2.0.0",
         "scikit-learn>=1.0.0",
         "seaborn>=0.11.0",
         "scikit-image>=0.18.0",
         "overrides>=6.1.0",
         "timm>=0.5.0",
     ],
+    package_dir = {"": "bkh_pytorch_utils"},
     python_requires='>=3.6',
 )
