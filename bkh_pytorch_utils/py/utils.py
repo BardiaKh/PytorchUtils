@@ -140,10 +140,12 @@ def add_weight_decay(models: Union[torch.nn.Module, List[torch.nn.Module]], weig
         
 def is_notebook_running():
     try:
-        shell = get_ipython().__class__.__name__
-        if shell == 'ZMQInteractiveShell':
+        shell = get_ipython().__class__
+        if 'google.colab._shell.Shell' in str(shell):
+            return True
+        if shell.__name__ == 'ZMQInteractiveShell':
             return True   # Jupyter notebook or qtconsole
-        elif shell == 'TerminalInteractiveShell':
+        elif shell.__name__ == 'TerminalInteractiveShell':
             return False  # Terminal running IPython
         else:
             return False  # Other type (?)
