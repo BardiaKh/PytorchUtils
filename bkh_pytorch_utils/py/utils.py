@@ -9,6 +9,8 @@ import random
 import pickle
 import torch
 from torch.utils.data.sampler import WeightedRandomSampler
+from torch.cuda.amp import autocast
+import functools
 
 import numpy as np
 import pandas as pd
@@ -237,3 +239,11 @@ class ExhaustiveWeightedRandomSampler(WeightedRandomSampler):
             (rand_tensor[..., None] == exaustive_indices).any(-1).nonzero().squeeze()
         ] = yield_indexes
         yield from iter(rand_tensor.tolist())
+
+def autocast_inference(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with torch.inference_mode():
+            with autocast():
+                return func(*args, **kwargs)
+    return wrapper

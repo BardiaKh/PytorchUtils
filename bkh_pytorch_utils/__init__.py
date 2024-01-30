@@ -17,6 +17,7 @@ from .py.utils import (
     is_notebook_running,
     split_data,
     load_weights,
+    autocast_inference,
     ExhaustiveWeightedRandomSampler,
 )
 from .py.optim import (
