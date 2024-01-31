@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 import monai as mn
-import pytorch_lightning as pl
+import lightning as pl
 
 from string import ascii_uppercase
 from sklearn.metrics import confusion_matrix
