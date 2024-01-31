@@ -5,7 +5,7 @@ import copy
 from overrides import overrides
 from tabulate import tabulate
 import lightning as pl
-from lightning.utilities import rank_zero_only
+from lightning.pytorch.utilities import rank_zero_only
 from torch.utils.data.distributed import DistributedSampler
 from .ddp_helper import DistributedProxySampler
 
