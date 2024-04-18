@@ -190,10 +190,10 @@ class EMA(pl.Callback):
             else:
                 self.is_deepspeed_zero3 = False
                 
-            if self.is_deepspeed_zero:
-                self.ema_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
+            if self.is_deepspeed_zero3:
+                self.ema_state_dict = copy.deepcopy(EMA.get_state_dict(pl_module))
             else:
-                self.ema_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
+                self.ema_state_dict = copy.deepcopy(EMA.get_state_dict(pl_module))
                 if self.ema_device:
                     self.ema_state_dict = {k: tensor.to(device=self.ema_device) for k, tensor in self.ema_state_dict.items()}
 
