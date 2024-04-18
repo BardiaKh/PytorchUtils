@@ -219,15 +219,14 @@ class EMA(pl.Callback):
                     self.apply_update_(pl_module, decay)
 
     def apply_update_(self, model, decay: float):
-        model_device = next(model.parameters()).device
         if self.foreach:
             ema_values = list(self.ema_state_dict.values())
             model_values = list(model.state_dict().values())
             if hasattr(torch, '_foreach_lerp_'):
-                torch._foreach_lerp_(ema_values, [v.to(model_device) for v in model_values], weight=1. - decay)
+                torch._foreach_lerp_(ema_values, [v.to(self.ema_device) for v in model_values], weight=1. - decay)
             else:
                 torch._foreach_mul_(ema_values, scalar=decay)
-                torch._foreach_add_(ema_values, [v.to(model_device) for v in model_values], alpha=1. - decay)
+                torch._foreach_add_(ema_values, [v.to(self.ema_device) for v in model_values], alpha=1. - decay)
         else:
             for ema_k, model_k in zip(self.ema_state_dict, model.named_parameters()):
                 if self.ema_state_dict[ema_k].is_floating_point():
@@ -236,9 +235,8 @@ class EMA(pl.Callback):
                     self.ema_state_dict[ema_k].copy_(model_k[1].to(self.ema_state_dict[ema_k].device))
 
     def apply_update_no_buffers_(self, model, decay: float):
-        model_device = next(model.parameters()).device
         ema_params = tuple(self.ema_state_dict[k] for k, _ in model.named_parameters())
-        model_params = tuple(v.to(model_device) for _, v in model.named_parameters())
+        model_params = tuple(v.to(self.ema_device) for _, v in model.named_parameters())
         if self.foreach:
             if hasattr(torch, '_foreach_lerp_'):
                 torch._foreach_lerp_(ema_params, model_params, weight=1. - decay)
