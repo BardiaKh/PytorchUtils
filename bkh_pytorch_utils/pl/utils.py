@@ -8,7 +8,11 @@ import lightning as pl
 from lightning.pytorch.utilities import rank_zero_only
 from torch.utils.data.distributed import DistributedSampler
 from .ddp_helper import DistributedProxySampler
-
+try:
+    import deepspeed
+    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
+except ImportError:
+    deepspeed = None
 
 class BKhModule(pl.LightningModule):
     def __init__(self, collate_fn=None, val_collate_fn=None, train_sampler=None, val_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None, val_batch_size=None, pin_memory=True, prefetch_factor=1, persistent_workers=False):
@@ -63,8 +67,9 @@ class BKhModule(pl.LightningModule):
             self.model = torch.compile(self.model, mode='reduce-overhead')
             print(f"Model is now compiled using torch.")
             
-    def load_ckpt(self, checkpoint_path, ema=True, strict=True):
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+    def load_ckpt(self, checkpoint, ema=True, strict=True):
+        if isinstance(checkpoint, str):
+            checkpoint = torch.load(checkpoint_path, map_location=self.device)
         if ema and "ema_state_dict" in checkpoint:
             checkpoint_key = "ema_state_dict"
         else:
@@ -164,85 +169,95 @@ class EMA(pl.Callback):
         super().__init__()
         self.decay = decay
         self.ema_interval_steps = ema_interval_steps
-        self.ema_device: str = f"{ema_device}" if ema_device else "cuda:0"  # perform ema on different device from the model
+        self.ema_device: str = f"{ema_device}" if ema_device else "cuda:0"
         self.use_ema_for_validation = use_ema_for_validation
-        self.ema_pin_memory = pin_memory if torch.cuda.is_available() else False  # Only works if CUDA is available
+        self.ema_pin_memory = pin_memory if torch.cuda.is_available() else False
         self.ema_state_dict: Dict[str, torch.Tensor] = {}
         self.original_state_dict = {}
         self._ema_state_dict_ready = False
-
+        self.is_deepspeed_zero3 = None
 
     @staticmethod
     def get_state_dict(pl_module: pl.LightningModule):
-        """Returns state dictionary from pl_module. Override if you want filter some parameters and/or buffers out.
-        For example, in pl_module has metrics, you don't want to return their parameters.
-        
-        code:
-            # Only consider modules that can be seen by optimizers. Lightning modules can have others nn.Module attached
-            # like losses, metrics, etc.
-            patterns_to_ignore = ("metrics1", "metrics2")
-            return dict(filter(lambda i: i[0].startswith(patterns), pl_module.state_dict().items()))
-        """
         return pl_module.state_dict()
         
     @overrides
-    def on_train_start(self, trainer: "pl.Trainer", pl_module: pl.LightningModule) -> None:
-        # Only keep track of EMA weights in rank zero.
+    def on_train_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
         if not self._ema_state_dict_ready and pl_module.global_rank == 0:
-            self.ema_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
-            if self.ema_device:
-                self.ema_state_dict = {k: tensor.to(device=self.ema_device) for k, tensor in self.ema_state_dict.items()}
+            strategy = trainer.strategy
+            if isinstance(strategy, pl.pytorch.strategies.DeepSpeedStrategy):
+                self.is_deepspeed_zero3 = strategy.zero_stage_3
+            else:
+                self.is_deepspeed_zero3 = False
+                
+            if self.is_deepspeed_zero:
+                self.ema_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
+            else:
+                self.ema_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
+                if self.ema_device:
+                    self.ema_state_dict = {k: tensor.to(device=self.ema_device) for k, tensor in self.ema_state_dict.items()}
 
-            if self.ema_device == "cpu" and self.ema_pin_memory:
-                self.ema_state_dict = {k: tensor.pin_memory() for k, tensor in self.ema_state_dict.items()}
+                if self.ema_device == "cpu" and self.ema_pin_memory:
+                    self.ema_state_dict = {k: tensor.pin_memory() for k, tensor in self.ema_state_dict.items()}
 
         self._ema_state_dict_ready = True
 
-    @rank_zero_only
-    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: pl.LightningModule, outputs, batch, batch_idx, *args, **kwargs) -> None:
-        # Update EMA weights
-        if batch_idx % self.ema_interval_steps == 0:
-            with torch.no_grad():
-                for key, value in self.get_state_dict(pl_module).items():
-                    ema_value = self.ema_state_dict[key]
-                    value_ = value.to(device=ema_value.device)
-                    ema_value.copy_(self.decay * ema_value + (1. - self.decay) * value_, non_blocking=True)
+    @staticmethod
+    def get_zero_param_status(param_list):
+        return [
+            p for p in param_list
+            if hasattr(p, 'ds_id') and p.ds_status == ZeroParamStatus.NOT_AVAILABLE
+        ]
+
+    def moving_average(self, pl_module: pl.LightningModule, ema_state_dict: Dict[str, torch.Tensor], decay: float):
+        with torch.no_grad():
+            if self.is_deepspeed_zero3:
+                for name, pl_param in pl_module.named_parameters():
+                    if name in ema_state_dict:
+                        ema_param = ema_state_dict[name]
+                        params_to_fetch = EMA.get_zero_param_status([pl_param, ema_param])
+                        should_gather_param = len(params_to_fetch) > 0
+                        with deepspeed.zero.GatheredParameters(params_to_fetch, enabled=should_gather_param):
+                            print(ema_param.shape, pl_param.shape, name)
+                            ema_state_dict[name].data.copy_(decay * ema_param.data + (1.0 - decay) * pl_param.data)
+            else:
+                for name, pl_param in pl_module.named_parameters():
+                    if name in ema_state_dict:
+                        ema_state_dict[name].data.copy_(decay * ema_state_dict[name].data + (1.0 - decay) * pl_param.data)
 
     @overrides
+    def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs, batch, batch_idx, *args, **kwargs) -> None:
+        if pl_module.global_rank == 0 and batch_idx % self.ema_interval_steps == 0:
+            self.moving_average(pl_module, self.ema_state_dict, self.decay)
+
+    @overrides  
     def on_validation_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
         if not self._ema_state_dict_ready or not self.use_ema_for_validation:
-            return  # Skip Lightning sanity validation check if no ema weights has been loaded from a checkpoint.
+            return
 
         self.original_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
         ema_state_dict = pl_module.trainer.strategy.broadcast(self.ema_state_dict, 0)
         self.ema_state_dict = ema_state_dict
         assert self.ema_state_dict.keys() == self.original_state_dict.keys(), \
-            f"There are some keys missing in the ema static dictionary broadcasted. " \
-            f"They are: {self.original_state_dict.keys() - self.ema_state_dict.keys()}"
+            f"Keys mismatch between EMA state dict and original state dict"
         pl_module.load_state_dict(self.ema_state_dict, strict=False)
 
         if pl_module.global_rank > 0:
-            # Remove ema state dict from the memory. In rank 0, it could be in ram pinned memory.
             self.ema_state_dict = {}
 
     @overrides
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         if not self._ema_state_dict_ready or not self.use_ema_for_validation:
-            return  # Skip Lightning sanity validation check if no ema weights has been loaded from a checkpoint.
-
-        # Replace EMA weights with training weights
+            return
+        
         pl_module.load_state_dict(self.original_state_dict, strict=False)
 
     @overrides
-    def on_save_checkpoint(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]
-    ) -> None:
+    def on_save_checkpoint(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]) -> None:
         checkpoint["ema_state_dict"] = self.ema_state_dict
         checkpoint["_ema_state_dict_ready"] = self._ema_state_dict_ready
 
     @overrides
-    def on_load_checkpoint(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]
-    ) -> None:
-        self._ema_state_dict_ready = checkpoint["_ema_state_dict_ready"]
+    def on_load_checkpoint(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]) -> None:
+        self._ema_state_dict_ready = checkpoint["_ema_state_dict_ready"] 
         self.ema_state_dict = checkpoint["ema_state_dict"]
