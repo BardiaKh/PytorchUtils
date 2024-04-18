@@ -165,7 +165,7 @@ class EMA(pl.Callback):
         self.use_warmup = use_warmup
         self.warmup_gamma = warmup_gamma
         self.warmup_power = warmup_power
-        self.ema_device: str = f"{ema_device}" if ema_device else "cuda:0"
+        self.ema_device: str = f"{ema_device}" if ema_device else None
         self.use_ema_for_validation = use_ema_for_validation
         self.ema_pin_memory = pin_memory if torch.cuda.is_available() else False
         self.foreach = foreach
@@ -219,24 +219,26 @@ class EMA(pl.Callback):
                     self.apply_update_(pl_module, decay)
 
     def apply_update_(self, model, decay: float):
+        model_device = next(model.parameters()).device
         if self.foreach:
             ema_values = list(self.ema_state_dict.values())
             model_values = list(model.state_dict().values())
             if hasattr(torch, '_foreach_lerp_'):
-                torch._foreach_lerp_(ema_values, model_values, weight=1. - decay)
+                torch._foreach_lerp_(ema_values, [v.to(model_device) for v in model_values], weight=1. - decay)
             else:
                 torch._foreach_mul_(ema_values, scalar=decay)
-                torch._foreach_add_(ema_values, model_values, alpha=1. - decay)
+                torch._foreach_add_(ema_values, [v.to(model_device) for v in model_values], alpha=1. - decay)
         else:
             for ema_k, model_k in zip(self.ema_state_dict, model.named_parameters()):
                 if self.ema_state_dict[ema_k].is_floating_point():
-                    self.ema_state_dict[ema_k].lerp_(model_k[1].to(device=self.ema_device), weight=1. - decay)
+                    self.ema_state_dict[ema_k].lerp_(model_k[1].to(self.ema_state_dict[ema_k].device), weight=1. - decay)
                 else:
-                    self.ema_state_dict[ema_k].copy_(model_k[1].to(device=self.ema_device))
+                    self.ema_state_dict[ema_k].copy_(model_k[1].to(self.ema_state_dict[ema_k].device))
 
     def apply_update_no_buffers_(self, model, decay: float):
+        model_device = next(model.parameters()).device
         ema_params = tuple(self.ema_state_dict[k] for k, _ in model.named_parameters())
-        model_params = tuple(v for _, v in model.named_parameters())
+        model_params = tuple(v.to(model_device) for _, v in model.named_parameters())
         if self.foreach:
             if hasattr(torch, '_foreach_lerp_'):
                 torch._foreach_lerp_(ema_params, model_params, weight=1. - decay)
@@ -245,10 +247,10 @@ class EMA(pl.Callback):
                 torch._foreach_add_(ema_params, model_params, alpha=1 - decay)
         else:
             for ema_p, model_p in zip(ema_params, model_params):
-                ema_p.lerp_(model_p.to(device=self.ema_device), weight=1. - decay)
+                ema_p.lerp_(model_p, weight=1. - decay)
 
         for ema_k, model_k in zip(self.ema_state_dict, model.named_buffers()):
-            self.ema_state_dict[ema_k].copy_(model_k[1].to(device=self.ema_device))
+            self.ema_state_dict[ema_k].copy_(model_k[1].to(self.ema_state_dict[ema_k].device))
 
     @overrides
     def on_validation_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
