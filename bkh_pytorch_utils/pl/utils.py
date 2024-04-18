@@ -145,6 +145,7 @@ class EMA(pl.Callback):
     def __init__(
         self,
         decay: float = 0.9999,
+        ema_interval_steps: int = 1,
         min_decay: float = 0.0,
         update_after_step: int = 0,
         use_warmup: bool = False,
@@ -158,6 +159,7 @@ class EMA(pl.Callback):
     ):
         super().__init__()
         self.decay = decay
+        self.ema_interval_steps = ema_interval_steps
         self.min_decay = min_decay
         self.update_after_step = update_after_step
         self.use_warmup = use_warmup
@@ -207,13 +209,14 @@ class EMA(pl.Callback):
 
     @rank_zero_only
     def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: pl.LightningModule, outputs, batch, batch_idx, *args, **kwargs) -> None:
-        decay = self.get_decay(trainer.global_step)
+        if batch_idx % self.ema_interval_steps == 0:
+            decay = self.get_decay(trainer.global_step)
 
-        with torch.no_grad():
-            if self.exclude_buffers:
-                self.apply_update_no_buffers_(pl_module, decay)
-            else:
-                self.apply_update_(pl_module, decay)
+            with torch.no_grad():
+                if self.exclude_buffers:
+                    self.apply_update_no_buffers_(pl_module, decay)
+                else:
+                    self.apply_update_(pl_module, decay)
 
     def apply_update_(self, model, decay: float):
         if self.foreach:
