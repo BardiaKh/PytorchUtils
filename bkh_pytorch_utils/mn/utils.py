@@ -43,13 +43,16 @@ class EnsureGrayscaleD(mn.transforms.MapTransform):
 
             if len(img.shape)==2: # Back & White
                 img = img.unsqueeze(0)
-            elif img.shape[0] in acceptable_channels: # Channel First
+            
+            if img.shape[0] in acceptable_channels: # Channel First
                 img = img.mean(dim = 0)
                 img = img.unsqueeze(0)
-            elif img.shape[-1] in acceptable_channels: # Channel Last
+            
+            if img.shape[-1] in acceptable_channels: # Channel Last
                 img = img.mean(dim = -1)
                 img = img.unsqueeze(0)
-            elif len(img.shape)==3 and img.shape[0]!=1 and img.shape[-1]!=1: #3D image
+            
+            if len(img.shape)==3 and img.shape[0]!=1 and img.shape[-1]!=1: #3D image
                 img = img.unsqueeze(0)
 
             d[key]=img
