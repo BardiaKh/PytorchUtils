@@ -39,7 +39,7 @@ class EnsureGrayscaleD(mn.transforms.MapTransform):
         for key in self.key_iterator(d):
             img=d[key]
             
-            acceptable_channels = [1, 3, 4]
+            acceptable_channels = [1, 2, 3, 4]
 
             if len(img.shape)==2: # Back & White
                 img = img.unsqueeze(0)
