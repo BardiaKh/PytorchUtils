@@ -64,7 +64,7 @@ class BKhModule(pl.LightningModule):
             
     def load_ckpt(self, checkpoint, ema=True, strict=True):
         if isinstance(checkpoint, str):
-            checkpoint = torch.load(checkpoint_path, map_location=self.device)
+            checkpoint = torch.load(checkpoint, map_location=self.device)
         if ema and "ema_state_dict" in checkpoint:
             checkpoint_key = "ema_state_dict"
         else:
