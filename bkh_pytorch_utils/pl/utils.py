@@ -151,11 +151,10 @@ class EMA(pl.Callback):
         use_warmup: bool = False,
         warmup_gamma: float = 1.0,
         warmup_power: float = 2/3,
-        ema_device: Optional[Union[torch.device, str]] = None,
+        ema_device: Optional[Union[torch.device, str]] = None,  # Recommend None (same device)
         use_ema_for_validation: bool = True,
-        pin_memory=True,
         foreach: bool = True,
-        exclude_buffers: bool = False,
+        exclude_buffers: bool = True,  # Default True - buffers rarely need EMA
     ):
         super().__init__()
         self.decay = decay
@@ -165,119 +164,130 @@ class EMA(pl.Callback):
         self.use_warmup = use_warmup
         self.warmup_gamma = warmup_gamma
         self.warmup_power = warmup_power
-        self.ema_device: str = f"{ema_device}" if ema_device else None
+        self.ema_device = ema_device
         self.use_ema_for_validation = use_ema_for_validation
-        self.ema_pin_memory = pin_memory if torch.cuda.is_available() else False
         self.foreach = foreach
         self.exclude_buffers = exclude_buffers
-        self.ema_state_dict: Dict[str, torch.Tensor] = {}
-        self.original_state_dict = {}
+        
+        # Cached references - avoid repeated state_dict() calls
+        self._ema_params: Optional[List[torch.Tensor]] = None
+        self._model_params: Optional[List[torch.Tensor]] = None
+        self._param_names: Optional[List[str]] = None
         self._ema_state_dict_ready = False
 
-    @staticmethod
-    def get_state_dict(pl_module: pl.LightningModule):
-        return pl_module.state_dict()
+    def _init_ema_params(self, pl_module: pl.LightningModule):
+        """Initialize EMA by cloning model parameters once."""
+        self._param_names = []
+        self._ema_params = []
+        self._model_params = []
         
+        for name, param in pl_module.named_parameters():
+            self._param_names.append(name)
+            self._model_params.append(param)
+            # Clone to same device or specified device
+            if self.ema_device:
+                ema_p = param.data.clone().to(self.ema_device)
+            else:
+                ema_p = param.data.clone()
+            self._ema_params.append(ema_p)
+        
+        # Optionally handle buffers
+        if not self.exclude_buffers:
+            for name, buf in pl_module.named_buffers():
+                self._param_names.append(name)
+                self._model_params.append(buf)
+                if self.ema_device:
+                    self._ema_params.append(buf.data.clone().to(self.ema_device))
+                else:
+                    self._ema_params.append(buf.data.clone())
+
     @overrides
     def on_train_start(self, trainer: "pl.Trainer", pl_module: pl.LightningModule) -> None:
-        # Only keep track of EMA weights in rank zero.
         if not self._ema_state_dict_ready and pl_module.global_rank == 0:
-            self.ema_state_dict = copy.deepcopy(self.get_state_dict(pl_module))
-            if self.ema_device:
-                self.ema_state_dict = {k: tensor.to(device=self.ema_device) for k, tensor in self.ema_state_dict.items()}
-
-            if self.ema_device == "cpu" and self.ema_pin_memory:
-                self.ema_state_dict = {k: tensor.pin_memory() for k, tensor in self.ema_state_dict.items()}
-
+            self._init_ema_params(pl_module)
         self._ema_state_dict_ready = True
 
     def get_decay(self, step: Optional[int] = None) -> float:
         if step is None:
             return self.decay
-
         step = max(0, step - self.update_after_step - 1)
         if step <= 0:
             return 0.0
-
         if self.use_warmup:
             decay = 1 - (1 + step / self.warmup_gamma) ** -self.warmup_power
-            decay = max(min(decay, self.decay), self.min_decay)
-        else:
-            decay = self.decay
-
-        return decay
+            return max(min(decay, self.decay), self.min_decay)
+        return self.decay
 
     @rank_zero_only
-    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: pl.LightningModule, outputs, batch, batch_idx, *args, **kwargs) -> None:
-        if batch_idx % self.ema_interval_steps == 0:
-            decay = self.get_decay(trainer.global_step)
+    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: pl.LightningModule, *args, **kwargs) -> None:
+        step = trainer.global_step
+        if step % self.ema_interval_steps != 0:
+            return
+            
+        decay = self.get_decay(step)
+        if decay == 0.0:
+            return
+            
+        self._update_ema(decay)
 
-            with torch.no_grad():
-                if self.exclude_buffers:
-                    self.apply_update_no_buffers_(pl_module, decay)
-                else:
-                    self.apply_update_(pl_module, decay)
-
-    def apply_update_(self, model, decay: float):
-        if self.foreach:
-            ema_values = list(self.ema_state_dict.values())
-            model_values = list(model.state_dict().values())
-            if hasattr(torch, '_foreach_lerp_'):
-                torch._foreach_lerp_(ema_values, [v.to(self.ema_device) for v in model_values], weight=1. - decay)
-            else:
-                torch._foreach_mul_(ema_values, scalar=decay)
-                torch._foreach_add_(ema_values, [v.to(self.ema_device) for v in model_values], alpha=1. - decay)
+    @torch.no_grad()
+    def _update_ema(self, decay: float):
+        """Core EMA update - optimized to avoid allocations."""
+        one_minus_decay = 1.0 - decay
+        
+        if self.foreach and self.ema_device is None:
+            # Fastest path: same device, foreach ops
+            # lerp_ is: ema = ema + (model - ema) * weight = ema * decay + model * (1-decay)
+            torch._foreach_lerp_(self._ema_params, self._model_params, weight=one_minus_decay)
+        elif self.foreach:
+            # foreach but different devices - need to transfer
+            model_on_device = [p.data.to(self.ema_device, non_blocking=True) for p in self._model_params]
+            torch._foreach_lerp_(self._ema_params, model_on_device, weight=one_minus_decay)
         else:
-            for ema_k, model_k in zip(self.ema_state_dict, model.named_parameters()):
-                if self.ema_state_dict[ema_k].is_floating_point():
-                    self.ema_state_dict[ema_k].lerp_(model_k[1].to(self.ema_state_dict[ema_k].device), weight=1. - decay)
+            # Fallback: individual lerp
+            for ema_p, model_p in zip(self._ema_params, self._model_params):
+                if ema_p.is_floating_point():
+                    ema_p.lerp_(model_p.data.to(ema_p.device, non_blocking=True), weight=one_minus_decay)
                 else:
-                    self.ema_state_dict[ema_k].copy_(model_k[1].to(self.ema_state_dict[ema_k].device))
+                    ema_p.copy_(model_p.data)
 
-    def apply_update_no_buffers_(self, model, decay: float):
-        ema_params = tuple(self.ema_state_dict[k] for k, _ in model.named_parameters())
-        model_params = tuple(v.to(self.ema_device) for _, v in model.named_parameters())
-        if self.foreach:
-            if hasattr(torch, '_foreach_lerp_'):
-                torch._foreach_lerp_(ema_params, model_params, weight=1. - decay)
-            else:
-                torch._foreach_mul_(ema_params, scalar=decay)
-                torch._foreach_add_(ema_params, model_params, alpha=1 - decay)
-        else:
-            for ema_p, model_p in zip(ema_params, model_params):
-                ema_p.lerp_(model_p, weight=1. - decay)
-
-        for ema_k, model_k in zip(self.ema_state_dict, model.named_buffers()):
-            self.ema_state_dict[ema_k].copy_(model_k[1].to(self.ema_state_dict[ema_k].device))
+    def _get_ema_state_dict(self) -> Dict[str, torch.Tensor]:
+        """Reconstruct state dict from cached params (only when needed)."""
+        return dict(zip(self._param_names, self._ema_params))
 
     @overrides
     def on_validation_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
         if not self._ema_state_dict_ready or not self.use_ema_for_validation:
             return
-
-        self.original_state_dict = copy.deepcopy(self.get_state_dict(pl_module)) 
-        ema_state_dict = pl_module.trainer.strategy.broadcast(self.ema_state_dict, 0)
-        self.ema_state_dict = ema_state_dict
-        assert set(self.ema_state_dict.keys()) == set(self.original_state_dict.keys()), \
-            f"keys mismatch: {set(self.ema_state_dict.keys()) ^ set(self.original_state_dict.keys())}"
-        pl_module.load_state_dict(self.ema_state_dict, strict=False)
-
-        if pl_module.global_rank > 0:
-            self.ema_state_dict = {}
+        
+        # Store current params (just the data tensors, not full clone)
+        self._original_params = [p.data.clone() for p in self._model_params]
+        
+        # Broadcast and load EMA weights
+        ema_state_dict = self._get_ema_state_dict()
+        ema_state_dict = pl_module.trainer.strategy.broadcast(ema_state_dict, 0)
+        pl_module.load_state_dict(ema_state_dict, strict=False)
 
     @overrides
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         if not self._ema_state_dict_ready or not self.use_ema_for_validation:
             return
         
-        pl_module.load_state_dict(self.original_state_dict, strict=False)
+        # Restore original params directly
+        with torch.no_grad():
+            for param, orig in zip(self._model_params, self._original_params):
+                param.data.copy_(orig)
+        self._original_params = None
 
     @overrides
     def on_save_checkpoint(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]) -> None:
-        checkpoint["ema_state_dict"] = self.ema_state_dict
+        checkpoint["ema_state_dict"] = self._get_ema_state_dict()
         checkpoint["_ema_state_dict_ready"] = self._ema_state_dict_ready
 
     @overrides
     def on_load_checkpoint(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]) -> None:
-        self._ema_state_dict_ready = checkpoint["_ema_state_dict_ready"]
-        self.ema_state_dict = checkpoint["ema_state_dict"]
+        self._ema_state_dict_ready = checkpoint.get("_ema_state_dict_ready", False)
+        ema_state_dict = checkpoint.get("ema_state_dict", {})
+        if ema_state_dict:
+            self._param_names = list(ema_state_dict.keys())
+            self._ema_params = list(ema_state_dict.values())
