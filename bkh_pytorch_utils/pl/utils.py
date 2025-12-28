@@ -10,12 +10,14 @@ from torch.utils.data.distributed import DistributedSampler
 from .ddp_helper import DistributedProxySampler
 
 class BKhModule(pl.LightningModule):
-    def __init__(self, collate_fn=None, val_collate_fn=None, train_sampler=None, val_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, dl_workers=-1, batch_size=None, val_batch_size=None, pin_memory=True, prefetch_factor=1, persistent_workers=False):
+    def __init__(self, collate_fn=None, val_collate_fn=None, test_collate_fn=None, train_sampler=None, val_sampler=None, test_sampler=None, ddp_sampler=False, train_ds=None, val_ds=None, test_ds=None, dl_workers=-1, batch_size=None, val_batch_size=None, test_batch_size=None, pin_memory=True, prefetch_factor=1, persistent_workers=False):
         super().__init__()
         self.collate_fn = collate_fn
         self.batch_size = batch_size
         self.val_batch_size = val_batch_size if val_batch_size is not None else batch_size
+        self.test_batch_size = test_batch_size if test_batch_size is not None else batch_size
         self.val_collate_fn = val_collate_fn if val_collate_fn is not None else collate_fn
+        self.test_collate_fn = test_collate_fn if test_collate_fn is not None else collate_fn
 
 
         self.total_steps = None
@@ -25,12 +27,15 @@ class BKhModule(pl.LightningModule):
 
         self.train_ds = None
         self.val_ds = None
+        self.test_ds = None
 
         self.train_dl = None
         self.val_dl = None
+        self.test_dl = None
 
         self.train_sampler = train_sampler
         self.val_sampler = val_sampler
+        self.test_sampler = test_sampler
         self.ddp_sampler = ddp_sampler
         self.pin_memory = pin_memory
         self.prefetch_factor = prefetch_factor
@@ -41,6 +46,9 @@ class BKhModule(pl.LightningModule):
 
         if val_ds is not None:
             self.set_val_dataset(val_ds)
+
+        if test_ds is not None:
+            self.set_test_dataset(test_ds)
 
     def stats(self):
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
@@ -111,6 +119,9 @@ class BKhModule(pl.LightningModule):
     def set_val_dataset(self, ds):
         self.val_ds = ds
 
+    def set_test_dataset(self, ds):
+        self.test_ds = ds
+
     def train_dataloader(self):
         if self.train_ds is None:
             raise Exception("Use the 'set_train_dataset' method to set the training dataset.")
@@ -140,6 +151,21 @@ class BKhModule(pl.LightningModule):
                 
             self.val_dl = torch.utils.data.DataLoader(self.val_ds, batch_size=self.val_batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.val_collate_fn, pin_memory=self.pin_memory, drop_last=False, prefetch_factor=self.prefetch_factor, persistent_workers=self.persistent_workers)
             return self.val_dl
+
+    def test_dataloader(self):
+        if self.test_ds is None:
+            raise Exception("Use the 'set_test_dataset' method to set the test dataset.")
+        else:
+            if self.ddp_sampler:
+                if self.test_sampler is None:
+                    instance_sampler = DistributedSampler(self.test_ds)
+                else:
+                    instance_sampler = DistributedProxySampler(self.test_sampler)
+            else:
+                instance_sampler = self.test_sampler
+                
+            self.test_dl = torch.utils.data.DataLoader(self.test_ds, batch_size=self.test_batch_size, sampler=instance_sampler, shuffle=False, num_workers=self.dl_workers, collate_fn=self.test_collate_fn, pin_memory=self.pin_memory, drop_last=False, prefetch_factor=self.prefetch_factor, persistent_workers=self.persistent_workers)
+            return self.test_dl
 
 class EMA(pl.Callback):
     def __init__(

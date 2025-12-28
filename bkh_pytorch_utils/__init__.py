@@ -1,6 +1,6 @@
 """A rapid prototyping tool for MONAI & PyTorch Lightning"""
 
-__version__ = "0.9.9"
+__version__ = "0.9.10"
 
 from .mn.utils import (
     empty_monai_cache,
