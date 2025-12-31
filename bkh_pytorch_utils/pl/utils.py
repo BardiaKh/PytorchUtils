@@ -327,4 +327,4 @@ class GradientNorm(pl.Callback):
 
     def on_before_optimizer_step(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", optimizer: "torch.optim.Optimizer") -> None:
         norms = grad_norm(pl_module, norm_type=self.norm_type)
-        pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=self.log_on_step, on_epoch=self.log_on_epoch, prog_bar=self.log_on_progress_bar, sync_dist=True)
+        pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=self.log_on_step, on_epoch=self.log_on_epoch, prog_bar=self.log_on_progress_bar)
