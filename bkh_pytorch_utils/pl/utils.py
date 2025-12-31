@@ -318,10 +318,13 @@ class EMA(pl.Callback):
             self._ema_params = list(ema_state_dict.values())
             
 class GradientNorm(pl.Callback):
-    def __init__(self, norm_type: float = 2.0):
+    def __init__(self, norm_type: float = 2.0, log_on_step: bool = True, log_on_epoch: bool = False, log_on_progress_bar: bool = False):
         self.norm_type = norm_type
+        self.log_on_step = log_on_step
+        self.log_on_epoch = log_on_epoch
+        self.log_on_progress_bar = log_on_progress_bar
         super().__init__()
 
     def on_before_optimizer_step(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", optimizer: "torch.optim.Optimizer") -> None:
         norms = grad_norm(pl_module, norm_type=self.norm_type)
-        pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=True, on_epoch=False, prog_bar=True)
+        pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=self.log_on_step, on_epoch=self.log_on_epoch, prog_bar=self.log_on_progress_bar, sync_dist=True)
