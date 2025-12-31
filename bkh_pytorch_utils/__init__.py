@@ -1,9 +1,10 @@
 """A rapid prototyping tool for MONAI & PyTorch Lightning"""
 
-__version__ = "0.9.10"
+__version__ = "0.9.11"
 
 from .mn.utils import (
     empty_monai_cache,
+    cache_dataset,
     EnsureGrayscaleD,
     ConvertToPIL,
     RandAugD
@@ -11,6 +12,7 @@ from .mn.utils import (
 from .pl.utils import (
     BKhModule,
     EMA,
+    GradientNorm,
 )
 from .py.utils import (
     seed_all,

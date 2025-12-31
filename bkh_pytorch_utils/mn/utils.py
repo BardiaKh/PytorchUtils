@@ -5,6 +5,8 @@ import copy
 import shutil
 import subprocess
 from PIL import Image as Img
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm.auto import tqdm
 
 import numpy as np
 import monai as mn
@@ -29,6 +31,14 @@ def empty_monai_cache(cache_dir:str, subsets = ["train", "val", "test"]) -> None
 
     # Cleanup temporary empty directory
     os.rmdir(empty_dir)
+    
+def cache_dataset(dataset, desc, num_workers=32):
+    assert isinstance(dataset, mn.data.PersistentDataset), "Dataset must be an instance of MONAI's PersistentDataset"
+    
+    with ThreadPoolExecutor(max_workers=num_workers) as ex:
+        futures = [ex.submit(lambda i=i: dataset[i], i) for i in range(len(dataset))]
+        for _ in tqdm(as_completed(futures), total=len(futures), desc=desc):
+            pass
 
 class EnsureGrayscaleD(mn.transforms.MapTransform):
     def __init__(self, keys:List[str]) -> None:

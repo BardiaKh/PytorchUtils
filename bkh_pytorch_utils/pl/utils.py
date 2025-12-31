@@ -19,7 +19,6 @@ class BKhModule(pl.LightningModule):
         self.val_collate_fn = val_collate_fn if val_collate_fn is not None else collate_fn
         self.test_collate_fn = test_collate_fn if test_collate_fn is not None else collate_fn
 
-
         self.total_steps = None
         self.last_stepped_step = -1
 
@@ -317,3 +316,12 @@ class EMA(pl.Callback):
         if ema_state_dict:
             self._param_names = list(ema_state_dict.keys())
             self._ema_params = list(ema_state_dict.values())
+            
+class GradientNorm(pl.Callback):
+    def __init__(self, norm_type: float = 2.0):
+        self.norm_type = norm_type
+        super().__init__()
+
+    def on_before_optimizer_step(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", optimizer: "torch.optim.Optimizer") -> None:
+        norms = pl.utilities.grad_norm(pl_module, norm_type=self.norm_type)
+        pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=True, on_epoch=False, prog_bar=True)
