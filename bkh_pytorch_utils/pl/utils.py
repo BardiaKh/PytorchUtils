@@ -5,7 +5,7 @@ import copy
 from overrides import overrides
 from tabulate import tabulate
 import lightning as pl
-from lightning.pytorch.utilities import rank_zero_only
+from lightning.pytorch.utilities import rank_zero_only, grad_norm
 from torch.utils.data.distributed import DistributedSampler
 from .ddp_helper import DistributedProxySampler
 
@@ -323,5 +323,5 @@ class GradientNorm(pl.Callback):
         super().__init__()
 
     def on_before_optimizer_step(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", optimizer: "torch.optim.Optimizer") -> None:
-        norms = pl.utilities.grad_norm(pl_module, norm_type=self.norm_type)
+        norms = grad_norm(pl_module, norm_type=self.norm_type)
         pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=True, on_epoch=False, prog_bar=True)
