@@ -15,9 +15,9 @@ class BKhModule(pl.LightningModule):
         self.collate_fn = collate_fn
         self.batch_size = batch_size
         self.val_batch_size = val_batch_size if val_batch_size is not None else batch_size
-        self.test_batch_size = test_batch_size if test_batch_size is not None else batch_size
+        self.test_batch_size = test_batch_size if test_batch_size is not None else self.val_batch_size
         self.val_collate_fn = val_collate_fn if val_collate_fn is not None else collate_fn
-        self.test_collate_fn = test_collate_fn if test_collate_fn is not None else collate_fn
+        self.test_collate_fn = test_collate_fn if test_collate_fn is not None else self.val_collate_fn
 
         self.total_steps = None
         self.last_stepped_step = -1
@@ -327,4 +327,4 @@ class GradientNorm(pl.Callback):
 
     def on_before_optimizer_step(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", optimizer: "torch.optim.Optimizer") -> None:
         norms = grad_norm(pl_module, norm_type=self.norm_type)
-        pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=self.log_on_step, on_epoch=self.log_on_epoch, prog_bar=self.log_on_progress_bar)
+        pl_module.log('grad_norm', norms[f'grad_{self.norm_type}_norm_total'], on_step=self.log_on_step, on_epoch=self.log_on_epoch, prog_bar=self.log_on_progress_bar, batch_size=1)
