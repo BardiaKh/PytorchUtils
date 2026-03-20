@@ -509,28 +509,19 @@ class EMA(pl.Callback):
 # =============================================================================
 
 class GradientNorm(pl.Callback):
-    """Log the total gradient norm at each optimiser step."""
-
-    def __init__(
-        self,
-        norm_type: float = 2.0,
-        log_on_step: bool = True,
-        log_on_epoch: bool = False,
-        log_on_progress_bar: bool = False,
-    ):
+    """Efficient gradient norm logging using fused foreach norms (single GPU sync)."""
+    def __init__(self, norm_type: float = 2.0):
         super().__init__()
-        self.norm_type           = norm_type
-        self.log_on_step         = log_on_step
-        self.log_on_epoch        = log_on_epoch
-        self.log_on_progress_bar = log_on_progress_bar
+        self.norm_type = norm_type
 
-    def on_before_optimizer_step(self, trainer: pl.Trainer, pl_module: pl.LightningModule, optimizer: torch.optim.Optimizer) -> None:
-        norms = grad_norm(pl_module, norm_type=self.norm_type)
-        pl_module.log(
-            "grad_norm",
-            norms[f"grad_{self.norm_type}_norm_total"],
-            on_step=self.log_on_step,
-            on_epoch=self.log_on_epoch,
-            prog_bar=self.log_on_progress_bar,
-            batch_size=1,
-        )
+    def on_before_optimizer_step(self, trainer, pl_module, optimizer):
+        grads = [p.grad.detach() for p in pl_module.parameters() if p.grad is not None]
+        if not grads:
+            return
+        # Use foreach_norm for fused kernel (1 launch instead of N)
+        if hasattr(torch, '_foreach_norm') and self.norm_type == 2.0:
+            per_norms = torch._foreach_norm(grads, self.norm_type)
+            total_norm = torch.stack(per_norms).norm(self.norm_type)
+        else:
+            total_norm = torch.stack([g.norm(self.norm_type) for g in grads]).norm(self.norm_type)
+        pl_module.log("grad_norm", total_norm, on_step=True, on_epoch=False, prog_bar=False, batch_size=1)
