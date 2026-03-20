@@ -510,9 +510,12 @@ class EMA(pl.Callback):
 
 class GradientNorm(pl.Callback):
     """Efficient gradient norm logging using fused foreach norms (single GPU sync)."""
-    def __init__(self, norm_type: float = 2.0):
+    def __init__(self, norm_type: float = 2.0, log_on_step: bool = True, log_on_epoch: bool = False, log_on_progress_bar: bool = False):
         super().__init__()
         self.norm_type = norm_type
+        self.log_on_step = log_on_step
+        self.log_on_epoch = log_on_epoch
+        self.log_on_progress_bar = log_on_progress_bar
 
     def on_before_optimizer_step(self, trainer, pl_module, optimizer):
         grads = [p.grad.detach() for p in pl_module.parameters() if p.grad is not None]
@@ -524,4 +527,4 @@ class GradientNorm(pl.Callback):
             total_norm = torch.stack(per_norms).norm(self.norm_type)
         else:
             total_norm = torch.stack([g.norm(self.norm_type) for g in grads]).norm(self.norm_type)
-        pl_module.log("grad_norm", total_norm, on_step=True, on_epoch=False, prog_bar=False, batch_size=1)
+        pl_module.log("grad_norm", total_norm, on_step=self.log_on_step, on_epoch=self.log_on_epoch, prog_bar=self.log_on_progress_bar, batch_size=1)
