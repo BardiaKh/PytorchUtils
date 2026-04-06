@@ -34,12 +34,25 @@ def empty_monai_cache(cache_dir:str, subsets = ["train", "val", "test"]) -> None
     
 def cache_dataset(dataset, desc, num_workers=32):
     assert isinstance(dataset, mn.data.PersistentDataset), "Dataset must be an instance of MONAI's PersistentDataset"
-    
+    failed_indices = []
     with ThreadPoolExecutor(max_workers=num_workers) as ex:
-        futures = [ex.submit(lambda i=i: dataset[i], i) for i in range(len(dataset))]
-        for _ in tqdm(as_completed(futures), total=len(futures), desc=desc):
-            pass
-
+        futures = {ex.submit(lambda i=i: dataset[i], i): i for i in range(len(dataset))}
+        for future in tqdm(as_completed(futures), total=len(futures), desc=desc):
+            i = futures[future]
+            try:
+                future.result()
+            except Exception:
+                tqdm.write(f"index {i} failed")
+                failed_indices.append(i)
+    
+    print("--------------------------------")
+    print(f"Failed indices: {failed_indices}")
+    print(f"Total failed: {len(failed_indices)}")
+    print(f"Total dataset: {len(dataset)}")
+    print(f"Failed percentage: {len(failed_indices) / len(dataset) * 100}%")
+    print("--------------------------------")
+    return failed_indices
+                
 class EnsureGrayscaleD(mn.transforms.MapTransform):
     def __init__(self, keys:List[str]) -> None:
         super().__init__(keys)
