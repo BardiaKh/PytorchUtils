@@ -1,6 +1,6 @@
 """A rapid prototyping tool for MONAI & PyTorch Lightning"""
 
-__version__ = "0.10.3"
+__version__ = "0.11.0"
 
 from .mn.utils import (
     empty_monai_cache,
@@ -25,6 +25,9 @@ from .py.utils import (
     load_weights,
     autocast_inference,
     ExhaustiveWeightedRandomSampler,
+)
+from .py.cli import (
+    param,
 )
 from .py.optim import (
     Lion,
